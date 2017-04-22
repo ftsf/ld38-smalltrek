@@ -239,6 +239,15 @@ proc draw(self: Level) =
 
   drawParticles(true)
 
+  if ship.altitude > 100:
+    let viewpos = ship.getViewPos()
+    setColor(14)
+    let s = ship.altitude - 100
+    circfill(viewpos.x + 8, viewpos.y - altitude + 16, s * s)
+    setColor(2)
+    circfill(viewpos.x + 8, viewpos.y - altitude + 16, (s * s) * 0.5)
+
+
 
 type AlienKind = enum
   GreenAlien
@@ -772,8 +781,8 @@ proc gameDraw() =
 
   if currentLevel.tension <= 0 and not currentLevel.failed:
     setColor(2)
-    printShadowC("Hostilities Ceased", 64, 100)
-    printShadowC("Moves: $1".format(currentLevel.moves), 64, 110)
+    printShadowC("Hostilities Ceased", 64, 100 + (currentLevel.ship.altitude * currentLevel.ship.altitude * 0.005).int)
+    printShadowC("Moves: $1".format(currentLevel.moves), 64, 110 + (currentLevel.ship.altitude * currentLevel.ship.altitude * 0.005).int)
 
   elif currentLevel.failed:
     setColor(3)
