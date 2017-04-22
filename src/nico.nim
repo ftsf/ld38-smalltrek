@@ -1715,7 +1715,7 @@ proc init*() =
   spriteSheet[] = createRGBSurface(0, 128, 128, 8, 0, 0, 0, 0)
   spriteSheet.format.palette.setPaletteColors(addr(colors[0]), 0, 16)
 
-  font = setFont(basePath & "/assets/font.png", " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{:}~")
+  font = setFont(basePath & "/assets/font.png", " !\"#$%&'()*+,-./0123456789:;<=>?@abcdefghijklmnopqrstuvwxyz[\\]^_`ABCDEFGHIJKLMNOPQRSTUVWXYZ{:}~")
   discard sdl2.setHint("SDL_HINT_RENDER_VSYNC", "1")
   discard sdl2.setHint("SDL_RENDER_SCALE_QUALITY", "0")
   sdl2.showCursor(false)

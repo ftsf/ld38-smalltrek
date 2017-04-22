@@ -1,0 +1,35 @@
+{ "height":4,
+ "layers":[
+        {
+         "data":[4, 1, 59, 21, 4, 26, 26, 25, 4, 19, 26, 26, 4, 21, 26, 17],
+         "height":4,
+         "name":"Tile Layer 1",
+         "opacity":1,
+         "type":"tilelayer",
+         "visible":true,
+         "width":4,
+         "x":0,
+         "y":0
+        }],
+ "nextobjectid":1,
+ "orientation":"orthogonal",
+ "renderorder":"right-down",
+ "tileheight":16,
+ "tilesets":[
+        {
+         "columns":8,
+         "firstgid":1,
+         "image":"..\/..\/..\/home\/ftsf\/programming\/ld38\/assets\/spritesheet.png",
+         "imageheight":128,
+         "imagewidth":128,
+         "margin":0,
+         "name":"spritesheet",
+         "spacing":0,
+         "tilecount":64,
+         "tileheight":16,
+         "tilewidth":16
+        }],
+ "tilewidth":16,
+ "version":1,
+ "width":4
+}

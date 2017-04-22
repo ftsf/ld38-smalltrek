@@ -2,6 +2,7 @@ import basic2d
 import nico
 import math
 import strutils
+import glm
 
 type
   Polygon* = seq[Point2d]
@@ -32,9 +33,9 @@ proc `-`*(v: Point2d): Point2d =
 proc isZero*(v: Vector2d): bool =
   return v.x == 0 and v.y == 0
 
-proc rndVec*(mag: float): Vector2d =
+proc rndVec*(mag: float): Vec2f =
   let hm = mag/2
-  vector2d(
+  vec2f(
     rnd(mag)-hm,
     rnd(mag)-hm
   )
