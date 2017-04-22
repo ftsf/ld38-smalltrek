@@ -5,6 +5,7 @@ import strutils
 import json
 import tween
 import algorithm
+import sequtils
 import pool
 
 {.this:self.}
@@ -13,6 +14,7 @@ type ParticleKind = enum
   heartParticle
   crossParticle
   dustParticle
+  bloodParticle
 
 type Particle = object
   kind: ParticleKind
@@ -23,6 +25,7 @@ type Particle = object
   above: bool
 
 type Object = ref object of RootObj
+  killed: bool
   name: string
   description: string
   pos: Vec2i
@@ -46,7 +49,7 @@ proc newRock(pos: Vec2i): Rock =
   result.size = vec2i(1,1)
   result.rockKind = rnd(2)
   result.name = "Rock"
-  result.description = "A boring rock, beloved by\nRotans."
+  result.description = "A boring rock, full of\ndelicious minerals.\nbeloved by Rotans."
 
 type Plant = ref object of Object
   eaten: bool
@@ -62,7 +65,7 @@ proc newPlant(pos: Vec2i): Plant =
   result.size = vec2i(1,1)
   result.pos = pos
   result.name = "Plant"
-  result.description = "A boring plant, beloved by\nthe Botarni."
+  result.description = "A nutritious edible plant.\nRequires plenty of sunlight.\nRequired by the Botarni."
   result.eaten = false
 
 type Crystal = ref object of Object
@@ -116,6 +119,7 @@ type Level = object
   ship: Ship
   timeout: float
   moves: int
+  failed: bool
 
 # GLOBALS
 
@@ -166,24 +170,29 @@ proc drawParticles(above: bool) =
             spr(78, p.pos.x.int - 4, p.pos.y.int - 4)
           else:
             spr(79, p.pos.x.int - 4, p.pos.y.int - 4)
+        of bloodParticle:
+          if p.ttl > p.maxttl / 2.0:
+            spr(78+16, p.pos.x.int - 4, p.pos.y.int - 4)
+          else:
+            spr(79+16, p.pos.x.int - 4, p.pos.y.int - 4)
 
 proc draw(self: Level) =
   # draw planet
-  var altitude = 0
-  for obj in objects:
-    if obj of Ship:
-      altitude = Ship(obj).altitude.int
+  var altitude = ship.altitude
 
   var offset: Vec2i
-  offset.x = 64 - (dimensions.x * 16) div 2
-  offset.y = 64 - (dimensions.y * 16) div 2 + altitude
+  let shipCamera = vec2i(-ship.getViewPos().x + 64 - 8, -ship.getViewPos().y + 64 + altitude).vec2f
+  let planetCamera = vec2i(64 - (dimensions.x * 16) div 2, 64 - (dimensions.y * 16) div 2).vec2f
+
+  offset = lerp(planetCamera, shipCamera, ship.altitude / 128.0).vec2i
 
   setCamera(-offset.x + (if shake > 0: rnd(2)-1 else: 0), -offset.y + (if shake > 0: rnd(2) - 1 else: 0))
   if shake > 0:
     shake -= 0.5
 
   setColor(5)
-  circfill(128 div 2 - offset.x, 128 div 2 - offset.x, dimensions.x div 2 * 16 + 10)
+  let center = (dimensions.x * 16) div 2
+  circfill(center, center, dimensions.x div 2 * 16 + 10)
   for y in 1..<dimensions.y:
     for x in 1..<dimensions.x:
       circfill(x*16,y*16,23)
@@ -276,6 +285,9 @@ proc newAlien(kind: AlienKind, pos: Vec2i): Alien =
   of BlackAlien:
     result.name = "Sordax"
     result.description = "Solitary creatures by nature.\nNeed some space to themself."
+  of WhiteAlien:
+    result.name = "Cardak"
+    result.description = "Mighty regimented warriors.\nHappy when aligned on a grid.\nBut not too close.\nViolent when displeased."
   of Tribble:
     result.name = "Mooki"
     result.description = "A violently fertile and\nadorably cute fluffy creature."
@@ -297,6 +309,13 @@ proc loadLevel(level: int): Level =
   result.tension = 1.0
   result.timeout = 2.0
   result.moves = 0
+
+  for s in mitems(stars):
+    s.pos = rndVec(128) + 64
+
+  for p in particles.mitems:
+    p.ttl = 0
+    particles.free(p)
 
   objects = newSeq[Object]()
   cursorObject = nil
@@ -420,12 +439,48 @@ proc isHappy(self: Alien): bool =
     if not fed:
       for obj in getAdjacentObjects(pos):
         if obj of Alien and Alien(obj).kind == Tribble:
-          objects.del(objects.find(obj))
+          obj.killed = true
+          if obj == cursorObject:
+            cursorObject = nil
           fed = true
           break
     return fed
   of BlackAlien:
     if hasAdjacentFreeSpace(pos):
+      return true
+  of WhiteAlien:
+    if not happy:
+      for obj in getAdjacentObjects(pos):
+        if obj of Alien:
+          if Alien(obj).kind == Tribble:
+            for i in 0..10:
+              particles.add(Particle(kind: bloodParticle, pos: (obj.pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(2.0), ttl: 0.25, maxttl: 0.25, above: true))
+            obj.killed = true
+            # killed a tribble =(
+            if obj == cursorObject:
+              cursorObject = nil
+    # check if we have adjacent or aligned other whites
+    var tooClose = false
+    var aligned = false
+    for x in 0..<currentLevel.dimensions.x:
+      let obj = objectAtPos(vec2i(x,pos.y))
+      if obj != nil and obj != self and obj of Alien and Alien(obj).kind == WhiteAlien:
+        if x >= pos.x - 1 and x <= pos.x + 1:
+          if Alien(obj).happy:
+            Alien(obj).happy = false
+            particles.add(Particle(kind: crossParticle, pos: vec2f(obj.pos * 16) + vec2f(8.0, 0.0), vel: vec2f(0, -0.25), ttl: 0.5, maxttl: 0.5, above: true))
+          tooClose = true
+        aligned = true
+    for y in 0..<currentLevel.dimensions.y:
+      let obj = objectAtPos(vec2i(pos.x,y))
+      if obj != nil and obj != self and obj of Alien and Alien(obj).kind == WhiteAlien:
+        if y >= pos.y - 1 and y <= pos.y + 1:
+          if Alien(obj).happy:
+            Alien(obj).happy = false
+            particles.add(Particle(kind: crossParticle, pos: vec2f(obj.pos * 16) + vec2f(8.0, 0.0), vel: vec2f(0, -0.25), ttl: 0.5, maxttl: 0.5, above: true))
+          tooClose = true
+        aligned = true
+    if not tooClose and aligned:
       return true
   of Tribble:
     return multiplied
@@ -466,7 +521,7 @@ method update(self: Alien, dt: float) =
       particles.add(Particle(kind: crossParticle, pos: vec2f(pos * 16) + vec2f(8.0, 0.0), vel: vec2f(0, -0.25), ttl: 0.5, maxttl: 0.5, above: true))
     happy = false
 
-  if currentLevel.tension <= 0 and currentLevel.timeout >= 1.9:
+  if currentLevel.tension <= 0 and not currentLevel.failed and currentLevel.timeout >= 1.9:
     particles.add(Particle(kind: heartParticle, pos: vec2f(pos * 16) + vec2f(8.0, 0.0), vel: vec2f(rnd(0.5)-0.25, -0.25 - rnd(0.5)), ttl: 4.0, maxttl: 4.0, above: true))
 
 
@@ -490,12 +545,15 @@ method draw(self: Alien) =
 
 method update(self: Ship, dt: float) =
   if currentLevel.tension <= 0 and currentLevel.timeout <= 0:
+    # taking off
     shake += 0.5
     altitude = lerp(altitude, 128, 0.01)
     if altitude < 10 and altitude > 1:
       particles.add(Particle(kind: dustParticle, pos: (pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.5, maxttl: 0.5, above: false))
+
   else:
     if altitude > 0:
+      #landing
       shake += 0.5
       altitude = lerp(altitude, 0, 0.05)
       if altitude < 10 and altitude > 1:
@@ -578,10 +636,28 @@ proc update(self: var Level, dt: float) =
     scanning = not scanning
 
 
-  for obj in mitems(objects):
-    obj.update(dt)
+  var hasTribbles = false
+  for i in 0..<objects.len:
+    if objects[i] of Alien and Alien(objects[i]).kind == Tribble:
+      hasTribbles = true
+    objects[i].update(dt)
 
-  if tension <= 0:
+  objects.keepIf() do(obj: Object) -> bool:
+    return not obj.killed
+
+  if hasTribbles:
+    var stillHasTribbles = false
+    for i in 0..<objects.len:
+      if objects[i] of Alien:
+        if Alien(objects[i]).kind == Tribble:
+          stillHasTribbles = true
+          break
+        if Alien(objects[i]).kind == RedAlien and Alien(objects[i]).fed:
+          stillHasTribbles = true
+    if not stillHasTribbles:
+      currentLevel.failed = true
+
+  if tension <= 0 and not failed:
     timeout -= dt
     if timeout < 0 and ship.altitude > 120:
       levelId += 1
@@ -692,12 +768,17 @@ proc gameDraw() =
       setColor(8)
     else:
       setColor(3)
-    printShadowR("tension: $1%".format(tensionPercent), 126, 2 - (10.0 * (2.0 - currentLevel.timeout).int))
+    printShadowR("tension: $1%".format(tensionPercent), 126, 2 - currentLevel.ship.altitude.int)
 
-  if currentLevel.tension <= 0:
+  if currentLevel.tension <= 0 and not currentLevel.failed:
     setColor(2)
     printShadowC("Hostilities Ceased", 64, 100)
     printShadowC("Moves: $1".format(currentLevel.moves), 64, 110)
+
+  elif currentLevel.failed:
+    setColor(3)
+    printShadowC("Mission Failed!", 64, 100)
+    printShadowC("Species eradicated!", 64, 110)
 
   if scanning:
     let scanobj = objectAtPos(cursor)
@@ -710,7 +791,11 @@ proc gameDraw() =
           printShadowR("content", 126, 72)
         else:
           setColor(3)
-          printShadowR("hostile", 126, 72)
+          printShadowR("discontent", 126, 72)
+      else:
+        setColor(1)
+        printShadowR("inanimate", 126, 72)
+
 
       var y = 82
       setColor(15)
@@ -719,7 +804,10 @@ proc gameDraw() =
         y += 9
 
   setColor(13)
-  printShadowR("[Z] grab [X] scan [C] menu", 124, 118)
+  if cursorObject == nil:
+    printShadowR("[Z] grab [X] scan [C] menu", 124, 120 + currentLevel.ship.altitude.int)
+  else:
+    printShadowR("[Z] drop [X] scan [C] menu", 124, 120 + currentLevel.ship.altitude.int)
 
 
 nico.init()
