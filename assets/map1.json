@@ -1,7 +1,7 @@
 { "height":3,
  "layers":[
         {
-         "data":[3, 59, 1, 25, 63, 1, 63, 63, 19],
+         "data":[3, 59, 1, 25, 32, 1, 32, 32, 19],
          "height":3,
          "name":"Tile Layer 1",
          "opacity":1,

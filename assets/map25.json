@@ -1,13 +1,13 @@
-{ "height":4,
+{ "height":5,
  "layers":[
         {
-         "data":[1, 2, 59, 1, 32, 32, 32, 25, 32, 32, 32, 32, 32, 25, 32, 1],
-         "height":4,
+         "data":[1, 32, 25, 59, 17, 8, 5, 32, 32, 5, 3, 8, 2, 32, 4, 5, 4, 8, 1, 5, 19, 4, 3, 8, 1],
+         "height":5,
          "name":"Tile Layer 1",
          "opacity":1,
          "type":"tilelayer",
          "visible":true,
-         "width":4,
+         "width":5,
          "x":0,
          "y":0
         }],
@@ -31,5 +31,5 @@
         }],
  "tilewidth":16,
  "version":1,
- "width":4
+ "width":5
 }

@@ -380,8 +380,7 @@ proc loadLevel(level: int): Level =
   try:
     map = parseFile(basePath & "/assets/map" & $(level+1) & ".json")
   except IOError:
-    levelId = 1
-    return loadLevel(levelId)
+    raise newException(Exception,"no such level: map$1.json".format(level+1))
 
   result.dimensions.x = map["width"].num.int
   result.dimensions.y = map["width"].num.int
@@ -597,6 +596,15 @@ method update(self: Alien, dt: float) =
           objects.add(newAlien(Tribble, pos + vec2i(0,-1)))
         elif pos.y < currentLevel.dimensions.y - 1 and objectAtPos(pos + vec2i(0,1)) == nil:
           objects.add(newAlien(Tribble, pos + vec2i(0,1)))
+    if multiplied:
+      if pos.x > 0 and objectAtPos(pos + vec2i(-1,0)) == nil:
+        objects.add(newAlien(Tribble, pos + vec2i(-1,0)))
+      elif pos.x < currentLevel.dimensions.x - 1 and objectAtPos(pos + vec2i(1,0)) == nil:
+        objects.add(newAlien(Tribble, pos + vec2i(1,0)))
+      elif pos.y > 0 and objectAtPos(pos + vec2i(0,-1)) == nil:
+        objects.add(newAlien(Tribble, pos + vec2i(0,-1)))
+      elif pos.y < currentLevel.dimensions.y - 1 and objectAtPos(pos + vec2i(0,1)) == nil:
+        objects.add(newAlien(Tribble, pos + vec2i(0,1)))
   if isHappy():
     if not happy:
       particles.add(Particle(kind: heartParticle, pos: vec2f(pos * 16) + vec2f(8.0, 0.0), vel: vec2f(0, -0.25), ttl: 0.5, maxttl: 0.5, above: true))
@@ -795,7 +803,7 @@ proc update(self: var Level, dt: float) =
       nico.run(menuInit, menuUpdate, menuDraw)
       return
 
-  if aborted:
+  if aborted or failed:
     timeout -= dt
     if timeout < 0 and ship.altitude > 120:
       previousLevelId = levelId
@@ -817,7 +825,7 @@ proc gameInit() =
   #setTargetSize(128,128)
   #loadSpriteSheet("spritesheet.png")
 
-  particles = initPool[Particle](256)
+  particles = initPool[Particle](512)
 
   #levelId = 1
   currentLevel = loadLevel(levelId)
@@ -964,7 +972,7 @@ type Planet = object
 var menuShip: MenuShip
 menuShip.pos = vec2f(64.0,64.0)
 
-var quadrant: range[0..3] = 0
+var quadrant: int = 0
 var planets: seq[Planet]
 var closestPlanet: ptr Planet
 var warpTimer: float
@@ -1020,7 +1028,7 @@ proc menuInit() =
   for i in 0..<levelsCompleted.len:
     levelsCompleted[i] = try: parseInt(getConfigValue("Levels", $i)) except: 0
     if levelsCompleted[i] > 0:
-      unlockedLevel += 1.5
+      unlockedLevel += 1.25
 
   for i in 0..<levelsCompleted.len:
     if levelsCompleted[i] == 0:
@@ -1035,8 +1043,71 @@ proc menuInit() =
   if nextLevelId == 1:
     messages.add(Message(text: "Congratulations on completing\nyour first assignment!\nThe quadrant is full of unrest.\nFollow the distress beacons and\nquell the tension.", step: 0, ttl: 5.0))
 
+  if nextLevelId == 2:
+    messages.add(Message(text: "We've had reports of Chrysornaks\nfighting with Botarni and\nRotans over access to crystals.\nGo see if you can sort it out.\n", step: 0, ttl: 5.0))
+
   if nextLevelId == 3:
-    messages.add(Message(text: "We've had reports of Chrysornaks\nfighting with Botarni over\naccess to crystals.\nGo see if you can sort it out.\n", step: 0, ttl: 5.0))
+    messages.add(Message(text: "Great work resolving that\nconflict.\nChryrsornaks seem to be\ncausing more issues in alpha\nquadrant.\nKeen an eye out.", step: 0, ttl: 5.0))
+
+  if nextLevelId == 4:
+    messages.add(Message(text: "We've had a report of a Partari\nconflict with the Botarni in\nthis sector.\nThey're quite the social\ncreatures.\nI hope you're using the\nINFO button! [X]", step: 0, ttl: 5.0))
+
+  if nextLevelId == 5:
+    messages.add(Message(text: "Alert! There's a 4 way\nconflict now that Partari\nare advancing in\nthe region.\nBut I trust you can solve\ntheir disputes.", step: 0, ttl: 5.0))
+
+  if nextLevelId == 6:
+    messages.add(Message(text: "We've had sightings of a strange\nnew species in this system.\nGo check it out and report!", step: 0, ttl: 5.0))
+
+  if nextLevelId == 7:
+    messages.add(Message(text: "Oh dear, these adorable things\nhave encountered the\nBotarni. I hope it'll\nwork out ok.", step: 0, ttl: 5.0))
+
+  if nextLevelId == 8:
+    if quadrant == 0:
+      messages.add(Message(text: "Wonderful, you've managed to\nsolve all the disputes in\nthis quadrant. But we're\ngetting reports from\nBeta quadrant now.", step: 0, ttl: 5.0))
+      messages.add(Message(text: "Engage your warp drive\nand get over there\nASAP! Fly towards the beacon\nas fast as you can.", step: 0, ttl: 5.0))
+      messages.add(Message(text: "Remember to disengage your\nwarp drive once you\narrive. Otherwise you might\nend up in Delta\nquadrant.", step: 0, ttl: 5.0))
+
+  if nextLevelId == 9:
+    messages.add(Message(text: "Looks like these cute\ncritters are causing\na ruckus over Beta quadrant\ntoo.", step: 0, ttl: 5.0))
+    messages.add(Message(text: "Chrysornaks really seem\nto hate them though.\nI wonder why...", step: 0, ttl: 5.0))
+    messages.add(Message(text: "How could anyone\nhate something so CUTE?", step: 0, ttl: 5.0))
+
+  if nextLevelId == 10:
+    messages.add(Message(text: "Botarni in this quadrant\nhave reported their\nplants being eaten by Omnatrus.\nGo see what you can do.", step: 0, ttl: 5.0))
+
+  if nextLevelId == 11:
+    messages.add(Message(text: "We've had a report of\ncreatures snatching Cuwudles.\nThey don't seem to be doing\nany harm. They just\nreally love them.", step: 0, ttl: 5.0))
+
+  if nextLevelId == 12:
+    messages.add(Message(text: "Some new friends have\nmoved in from another quadrant.\nThey claim they don't have\nenough space.\nSee if you can help\nthe Sordax out.", step: 0, ttl: 5.0))
+
+  if nextLevelId == 13:
+    messages.add(Message(text: "Hopefulyl these new\nSordax will get along\nwith the Cuwudles\nbetter than the Chrysornaks do.", step: 0, ttl: 5.0))
+
+  if nextLevelId == 14:
+    messages.add(Message(text: "Sordax, Cuwudles, Rotans\nand Chrysornaks.\nThis will be a challenge!", step: 0, ttl: 5.0))
+
+  if nextLevelId == 15:
+    messages.add(Message(text: "Ack! Botarni and Omnatrus!\nNot a good match.\nLook after those plants.\nAnd those Cuwudles of course!", step: 0, ttl: 5.0))
+
+  if nextLevelId == 16:
+    if quadrant != 2:
+      messages.add(Message(text: "Lots of new faces in the\nBeta quadrant. But they all\nseem to be settled now.\nHead on over to the\nDelta quadrant.", step: 0, ttl: 5.0))
+    messages.add(Message(text: "Reports of Mookarin facing\noff with Chrysornaks.\nPresumably something to do\nwith Cuwudles.", step: 0, ttl: 5.0))
+
+  if nextLevelId == 17:
+    messages.add(Message(text: "Things are getting messy!\nYou're on your own here.\nGood luck Commander!", step: 0, ttl: 5.0))
+
+  if nextLevelId == 19:
+    messages.add(Message(text: "What!?!", step: 0, ttl: 5.0))
+    messages.add(Message(text: "What are Cardaks doing in the\nDelta quadrant?!", step: 0, ttl: 5.0))
+    messages.add(Message(text: "Be super careful!\nLook after those Cuwudles!\nI love them so!", step: 0, ttl: 5.0))
+
+  if nextLevelId == 20:
+    messages.add(Message(text: "Cardaks are only happy\nwhen they're formed up\ncorrectly.\nMake sure they're spaced out\nand aligned with another\nsoldier!", step: 0, ttl: 5.0))
+
+  if nextLevelId == 23:
+    messages.add(Message(text: "I used to think there\ncould never be too many\nCuwudles...\nMaybe I need to reconsider.", step: 0, ttl: 5.0))
 
   menuShip.vel = vec2f(0,0)
 
@@ -1053,6 +1124,12 @@ proc menuUpdate(dt: float) =
 
   let boost = warpUnlocked and btn(pcA)
   let move = if boost: 0.05 else: 0.01
+
+  if btnp(pcB):
+    levelsCompleted[nextLevelId] = 1
+    nextLevelId += 1
+    menuInit()
+    return
 
   if btn(pcLeft):
     menuShip.angle = 0
@@ -1119,9 +1196,6 @@ proc menuUpdate(dt: float) =
         nearestDistance = dist
         #and (planet.pos - menuShip.pos).length < (planet.size + 10).float:
 
-  if oldClosestPlanet != closestPlanet:
-    sfx(sfxCursor)
-
   if messages.len > 0:
     alias m, messages[messages.low]
     if btn(pcA) or btn(pcX):
@@ -1146,7 +1220,7 @@ proc menuUpdate(dt: float) =
         # must be starbase
         if not warpUnlocked and unlockedLevel >= 8:
           warpUnlocked = true
-          messages.add(Message(text: "Commander, we've fitted your\nship with a warp drive.\nYou can now travel to other\nquadrants.\nUse [Z] to engage the\nwarp drive.", step: 0, ttl: 5.0))
+          messages.add(Message(text: "Commander, we've fitted your\nship with a warp drive.\nYou can now travel to other\nquadrants.\nUse [Z] to engage the\nwarp drive. Fly fast\ntowards the edges of the system\nto warp.", step: 0, ttl: 5.0))
           updateConfigValue("Unlocks","warp","true")
           saveConfig()
         else:
@@ -1197,11 +1271,14 @@ proc menuDraw() =
     of 1: 12
     of 2: 20
     of 3: 24
+    else:
+      0
   setColor(case quadrant:
   of 0: 8
   of 1: 7
   of 2: 14
-  of 3: 3)
+  of 3: 3
+  else: 0)
   circfill(64,64,sunsize)
   setColor(2)
   circfill(64,64,(sunsize.float * 0.75).int + (sin(frame.float / 100.0) * 3.0).int)
@@ -1299,8 +1376,8 @@ proc menuDraw() =
   messages.keepIf() do(a: Message) -> bool:
     a.ttl > 0
 
-  setColor(2)
-  if quadrantTimer > 0.0:
+  if quadrantTimer > 0.0 and messages.len == 0:
+    setColor(2)
     quadrantTimer -= timeStep
     case quadrant:
     of 0:
@@ -1311,6 +1388,8 @@ proc menuDraw() =
       printShadowC("delta quadrant", 64, 2)
     of 3:
       printShadowC("gamma quadrant", 64, 2)
+    else:
+      discard
 
   if warpUnlocked and abs(menuShip.vel.x) > 0.5:
     setColor(if frame mod 30 < 15: 2 else: 14)
