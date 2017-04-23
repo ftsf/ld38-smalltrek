@@ -389,6 +389,8 @@ proc loadLevel(level: int): Level =
   result.moves = 0
   result.success = false
 
+  scanning = false
+
   confirmAbort = false
 
   for s in mitems(stars):
@@ -1030,10 +1032,16 @@ proc menuInit() =
     if levelsCompleted[i] > 0:
       unlockedLevel += 1.25
 
+  nextLevelId = 33
   for i in 0..<levelsCompleted.len:
     if levelsCompleted[i] == 0:
+      echo "level ", i, " has 0 score"
       nextLevelId = i
       break
+
+  for i,moves in levelsCompleted:
+    echo i, ": ", moves
+  echo nextLevelId
 
   if nextLevelId == 0:
     setQuadrant(0, false)
@@ -1108,6 +1116,18 @@ proc menuInit() =
 
   if nextLevelId == 23:
     messages.add(Message(text: "I used to think there\ncould never be too many\nCuwudles...\nMaybe I need to reconsider.", step: 0, ttl: 5.0))
+    messages.add(Message(text: "Cardaks sure have a way\nwith them....", step: 0, ttl: 5.0))
+
+  if nextLevelId == 24:
+    if quadrant != 3:
+      messages.add(Message(text: "Delta quadrant is clear!\nLet's head to the Gamma\nquadrant!", step: 0, ttl: 5.0))
+
+  if nextLevelId == 33:
+    messages.add(Message(text: "Congratulations! You've\nmade the whole world a\nhappy place!\nEven if it is a small world!", step: 0, ttl: 5.0))
+    messages.add(Message(text: "Thanks for playing commander!", step: 0, ttl: 5.0))
+    messages.add(Message(text: "This game was made by Impbox\nFor Ludum Dare 38:\n'A Small World'.", step: 0, ttl: 5.0))
+    messages.add(Message(text: "It was made entirely\nin 48 hours.", step: 0, ttl: 5.0))
+    messages.add(Message(text: "Now it's time to have\na nap!", step: 0, ttl: 5.0))
 
   menuShip.vel = vec2f(0,0)
 
