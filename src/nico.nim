@@ -1623,6 +1623,15 @@ when not defined(emscripten):
       currentMusicId = musicId
       discard mixer.playMusic(music, -1)
 
+  proc fadeMusicOut*(ms: int) =
+    discard mixer.fadeOutMusic(ms)
+
+  proc fadeMusicIn*(musicId: MusicId, ms: int) =
+    var music = musicLibrary[musicId]
+    if music != nil:
+      currentMusicId = musicId
+      discard mixer.fadeInMusic(music, -1, ms)
+
   proc getMusic*(): MusicId =
     return currentMusicId
 

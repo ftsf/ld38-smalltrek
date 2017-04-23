@@ -636,6 +636,7 @@ method update(self: Ship, dt: float) =
   if (currentLevel.success or currentLevel.failed or currentLevel.aborted) and currentLevel.timeout <= 0:
     if altitude == 0:
       sfx(sfxTakeoff,3)
+      fadeMusicOut(3000)
     # taking off
     shake += 0.5
     altitude = lerp(altitude, 128, 0.01)
@@ -655,6 +656,7 @@ method update(self: Ship, dt: float) =
       if altitude < 1.0:
         altitude = 0
         sfx(sfxDrop,2)
+        fadeMusicIn(1, 500)
     if altitude == 0:
       procCall update(Movable(self), dt)
 
@@ -1007,6 +1009,8 @@ proc menuInit() =
 
   unlockedLevel = 0
 
+  fadeMusicIn(0, 500)
+
   warpUnlocked = try: parseBool(getConfigValue("Unlocks","warp")) except: false
 
   if not quadrantInitialized:
@@ -1130,17 +1134,19 @@ proc menuUpdate(dt: float) =
     if btnp(pcA) or btnp(pcX):
       if m.step >= m.text.len:
         m.ttl = 0
-        sfx(sfxCross)
+        sfx(sfxHeart)
   elif closestPlanet != nil and (closestPlanet.pos - menuShip.pos).length < 10.0 and menuShip.vel.length < 0.5:
     if btnp(pcX):
       if closestPlanet.level >= 0:
         levelId = closestPlanet.level
+        # start level
+        fadeMusicOut(250)
         nico.run(gameInit, gameUpdate, gameDraw)
       else:
         # must be starbase
         if not warpUnlocked and unlockedLevel >= 8:
           warpUnlocked = true
-          messages.add(Message(text: "Commander, we've fitted your\nship with a warp drive.\nYou can now travel to other\nquadrants.\nUse [Z] to engage the warp drive.", step: 0, ttl: 5.0))
+          messages.add(Message(text: "Commander, we've fitted your\nship with a warp drive.\nYou can now travel to other\nquadrants.\nUse [Z] to engage the\nwarp drive.", step: 0, ttl: 5.0))
           updateConfigValue("Unlocks","warp","true")
           saveConfig()
         else:
@@ -1351,6 +1357,11 @@ proc introInit() =
   loadSfx(sfxEat, "sfx/smalltrek_11.wav")
   loadSfx(sfxCursor, "sfx/smalltrek_12.wav")
   loadSfx(sfxAborted, "sfx/smalltrek_13.wav")
+
+  loadMusic(0, "music/overworld.ogg")
+  loadMusic(1, "music/underworld.ogg")
+
+  musicVol(64)
 
   frame = 0
 
