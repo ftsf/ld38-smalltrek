@@ -1592,8 +1592,8 @@ proc getConfigValue*(section, key: string): string =
 
 
 type
-  MusicId = range[-1..63]
-  SfxId = range[-1..63]
+  MusicId* = range[-1..63]
+  SfxId* = range[-1..63]
 
 var currentMusicId: int = -1
 

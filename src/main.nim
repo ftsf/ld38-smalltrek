@@ -10,6 +10,24 @@ import pool
 
 {.this:self.}
 
+type SFX = enum
+  sfxDrop
+  sfxMove
+  sfxGrab
+  sfxLand
+  sfxTakeoff
+  sfxHeart
+  sfxCross
+  sfxSuccess
+  sfxFailure
+  sfxHyperdrive
+  sfxEat
+  sfxGlomp
+  sfxBump
+
+converter toInt*(sfx: SFX): SfxId =
+  return sfx.SfxId
+
 type ParticleKind = enum
   heartParticle
   crossParticle
@@ -120,6 +138,7 @@ type Level = object
   timeout: float
   moves: int
   failed: bool
+  success: bool
 
 # GLOBALS
 
@@ -141,7 +160,7 @@ var moveBuffer: seq[Vec2i]
 proc getViewPos(self: Movable): Vec2i =
   let currentPos = vec2f(float(pos.x * 16), float(pos.y * 16))
   let lastPos = vec2f(float(lastPos.x * 16), float(lastPos.y * 16))
-  return tween.easeOutCubic(alpha, lastPos, currentPos - lastPos).vec2i
+  return tween.easeOutCubic(alpha, lastPos, currentPos - lastPos).vec2i + (if Object(self) == cursorObject: vec2i(0, -4) else: vec2i(0,0))
 
 method draw(self: Ship) =
   let pos = getViewPos()
@@ -214,7 +233,7 @@ proc draw(self: Level) =
   palt()
 
   # cursor
-  block:
+  if tension > 0:
     if cursorObject == nil:
       setColor(8)
     else:
@@ -235,7 +254,7 @@ proc draw(self: Level) =
     if cursorObject == nil and frame mod 60 < 30:
       rectCorners(x-1,y-1,x+17,y+17)
     else:
-      rectCorners(x,y,x+16,y+16)
+      rectCorners(x+1,y+1,x+15,y+15)
 
   drawParticles(true)
 
@@ -318,6 +337,7 @@ proc loadLevel(level: int): Level =
   result.tension = 1.0
   result.timeout = 2.0
   result.moves = 0
+  result.success = false
 
   for s in mitems(stars):
     s.pos = rndVec(128) + 64
@@ -360,6 +380,8 @@ proc loadLevel(level: int): Level =
   if result.ship != nil:
     cursor = result.ship.pos
     lastCursor = cursor
+
+  sfx(sfxLand,3)
 
 proc objectAtPos(pos: Vec2i): Object =
   for obj in mitems(objects):
@@ -438,6 +460,7 @@ proc isHappy(self: Alien): bool =
     var happy = false
     for obj in getAdjacentObjects(pos):
       if obj of Plant and not Plant(obj).eaten:
+        sfx(sfxEat)
         Plant(obj).eaten = true
         for i in 0..10:
           particles.add(Particle(kind: dustParticle, pos: (obj.pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.5, maxttl: 0.5, above: true))
@@ -463,7 +486,7 @@ proc isHappy(self: Alien): bool =
         if obj of Alien:
           if Alien(obj).kind == Tribble:
             for i in 0..10:
-              particles.add(Particle(kind: bloodParticle, pos: (obj.pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(2.0), ttl: 0.25, maxttl: 0.25, above: true))
+              particles.add(Particle(kind: bloodParticle, pos: lerp(getViewPos().vec2f + vec2f(8.0,8.0), (obj.pos * 16).vec2f + vec2f(8.0, 8.0), 0.5), vel: rndVec(2.0), ttl: 0.25, maxttl: 0.25, above: true))
             obj.killed = true
             # killed a tribble =(
             if obj == cursorObject:
@@ -524,10 +547,12 @@ method update(self: Alien, dt: float) =
   if isHappy():
     if not happy:
       particles.add(Particle(kind: heartParticle, pos: vec2f(pos * 16) + vec2f(8.0, 0.0), vel: vec2f(0, -0.25), ttl: 0.5, maxttl: 0.5, above: true))
+      sfx(sfxHeart,1)
     happy = true
   else:
     if happy:
       particles.add(Particle(kind: crossParticle, pos: vec2f(pos * 16) + vec2f(8.0, 0.0), vel: vec2f(0, -0.25), ttl: 0.5, maxttl: 0.5, above: true))
+      sfx(sfxCross,1)
     happy = false
 
   if currentLevel.tension <= 0 and not currentLevel.failed and currentLevel.timeout >= 1.9:
@@ -536,6 +561,8 @@ method update(self: Alien, dt: float) =
 
 method draw(self: Alien) =
   let viewPos = getViewPos()
+  if Object(self) == cursorObject:
+    spr(100, viewPos.x, viewPos.y + 8, 2, 2)
   if scanning and cursor == pos:
     pal(0,if frame mod 10 < 5: 15 else: 2)
   else:
@@ -554,11 +581,16 @@ method draw(self: Alien) =
 
 method update(self: Ship, dt: float) =
   if currentLevel.tension <= 0 and currentLevel.timeout <= 0:
+    if altitude == 0:
+      sfx(sfxTakeoff,3)
     # taking off
     shake += 0.5
     altitude = lerp(altitude, 128, 0.01)
     if altitude < 10 and altitude > 1:
       particles.add(Particle(kind: dustParticle, pos: (pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.5, maxttl: 0.5, above: false))
+    if altitude.int == 100:
+      sfx(sfxHyperdrive,3)
+      altitude = 101
 
   else:
     if altitude > 0:
@@ -567,13 +599,15 @@ method update(self: Ship, dt: float) =
       altitude = lerp(altitude, 0, 0.05)
       if altitude < 10 and altitude > 1:
         particles.add(Particle(kind: dustParticle, pos: (pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.5, maxttl: 0.5, above: false))
-      if altitude < 0.01:
+      if altitude < 1.0:
         altitude = 0
+        sfx(sfxDrop,2)
     if altitude == 0:
       procCall update(Movable(self), dt)
 
 method move(self: Object, target: Vec2i) {.base.} =
   shake += 1.0
+  sfx(sfxBump, 2)
   return
 
 method move(self: Movable, target: Vec2i) =
@@ -581,11 +615,14 @@ method move(self: Movable, target: Vec2i) =
     return
   if target.x < 0 or target.y < 0 or target.x > currentLevel.dimensions.x - 1 or target.y > currentLevel.dimensions.y - 1:
     shake += 1.0
+    sfx(sfxBump, 2)
     return
   if objectAtPos(target) == nil:
     pos = target
+    sfx(sfxMove,2)
     alpha = 0.0
   else:
+    sfx(sfxBump, 2)
     shake += 1.0
 
   objects.sort() do(a,b: Object) -> int:
@@ -598,7 +635,7 @@ method move(self: Ship, target: Vec2i) =
 
 proc update(self: var Level, dt: float) =
 
-  if tension > 0:
+  if not success and not failed:
     if btnp(pcLeft):
       moveBuffer.add(vec2i(-1,0))
     if btnp(pcRight):
@@ -619,10 +656,14 @@ proc update(self: var Level, dt: float) =
         let obj = objectAtPos(cursor)
         cursorObject = obj
         if cursorObject != nil:
+          sfx(sfxGrab,2)
           if cursorObject of Movable:
             Movable(cursorObject).originalPos = obj.pos
       else:
         # drop
+        sfx(sfxDrop,2)
+        for i in 0..10:
+          particles.add(Particle(kind: dustParticle, pos: (cursorObject.pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.25, maxttl: 0.25, above: false))
         if cursorObject of Movable and cursorObject.pos != Movable(cursorObject).originalPos:
           currentLevel.moves += 1
         cursorObject = nil
@@ -667,6 +708,9 @@ proc update(self: var Level, dt: float) =
       currentLevel.failed = true
 
   if tension <= 0 and not failed:
+    if not success:
+      success = true
+      sfx(sfxSuccess)
     timeout -= dt
     if timeout < 0 and ship.altitude > 120:
       levelId += 1
@@ -687,6 +731,19 @@ proc gameInit() =
   setTargetSize(128,128)
   setScreenSize(256,256)
   loadSpriteSheet("spritesheet.png")
+
+  loadSfx(sfxDrop, "sfx/smalltrek_0.wav")
+  loadSfx(sfxMove, "sfx/smalltrek_1.wav")
+  loadSfx(sfxGrab, "sfx/smalltrek_2.wav")
+  loadSfx(sfxLand, "sfx/smalltrek_3.wav")
+  loadSfx(sfxTakeoff, "sfx/smalltrek_4.wav")
+  loadSfx(sfxHeart, "sfx/smalltrek_5.wav")
+  loadSfx(sfxCross, "sfx/smalltrek_6.wav")
+  loadSfx(sfxSuccess, "sfx/smalltrek_7.wav")
+  loadSfx(sfxHyperdrive, "sfx/smalltrek_8.wav")
+  loadSfx(sfxFailure, "sfx/smalltrek_9.wav")
+  loadSfx(sfxBump, "sfx/smalltrek_10.wav")
+  loadSfx(sfxEat, "sfx/smalltrek_11.wav")
 
   particles = initPool[Particle](256)
 
@@ -780,6 +837,7 @@ proc gameDraw() =
     printShadowR("tension: $1%".format(tensionPercent), 126, 2 - currentLevel.ship.altitude.int)
 
   if currentLevel.tension <= 0 and not currentLevel.failed:
+    cursorObject = nil
     setColor(2)
     printShadowC("Hostilities Ceased", 64, 100 + (currentLevel.ship.altitude * currentLevel.ship.altitude * 0.005).int)
     printShadowC("Moves: $1".format(currentLevel.moves), 64, 110 + (currentLevel.ship.altitude * currentLevel.ship.altitude * 0.005).int)
