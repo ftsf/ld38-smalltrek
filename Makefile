@@ -1,5 +1,5 @@
 NIM=nim
-APPNAME=ldbase
+APPNAME=smalltrek
 
 $(APPNAME)-debug: src/*.nim
 	$(NIM) c -d:debug -o:$@ src/main.nim
