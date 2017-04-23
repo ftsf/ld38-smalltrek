@@ -375,7 +375,6 @@ proc newAlien(kind: AlienKind, pos: Vec2i): Alien =
 
 proc loadLevel(level: int): Level =
   levelId = level
-  echo "loadLevel: ", level
   var map: JsonNode
   try:
     map = parseFile(basePath & "/assets/map" & $(level+1) & ".json")
@@ -715,7 +714,7 @@ proc update(self: var Level, dt: float) =
       return
     return
 
-  if not (success or failed or aborted):
+  if not (success or failed or aborted) and ship.altitude == 0:
     if btnp(pcLeft):
       moveBuffer.add(vec2i(-1,0))
     if btnp(pcRight):
@@ -1035,13 +1034,8 @@ proc menuInit() =
   nextLevelId = 33
   for i in 0..<levelsCompleted.len:
     if levelsCompleted[i] == 0:
-      echo "level ", i, " has 0 score"
       nextLevelId = i
       break
-
-  for i,moves in levelsCompleted:
-    echo i, ": ", moves
-  echo nextLevelId
 
   if nextLevelId == 0:
     setQuadrant(0, false)
@@ -1442,20 +1436,20 @@ proc introInit() =
   setTargetSize(128,128)
   loadSpriteSheet("spritesheet.png")
 
-  loadSfx(sfxDrop, "sfx/smalltrek_0.wav")
-  loadSfx(sfxMove, "sfx/smalltrek_1.wav")
-  loadSfx(sfxGrab, "sfx/smalltrek_2.wav")
-  loadSfx(sfxLand, "sfx/smalltrek_3.wav")
-  loadSfx(sfxTakeoff, "sfx/smalltrek_4.wav")
-  loadSfx(sfxHeart, "sfx/smalltrek_5.wav")
-  loadSfx(sfxCross, "sfx/smalltrek_6.wav")
-  loadSfx(sfxSuccess, "sfx/smalltrek_7.wav")
-  loadSfx(sfxHyperdrive, "sfx/smalltrek_8.wav")
-  loadSfx(sfxFailure, "sfx/smalltrek_9.wav")
-  loadSfx(sfxBump, "sfx/smalltrek_10.wav")
-  loadSfx(sfxEat, "sfx/smalltrek_11.wav")
-  loadSfx(sfxCursor, "sfx/smalltrek_12.wav")
-  loadSfx(sfxAborted, "sfx/smalltrek_13.wav")
+  loadSfx(sfxDrop, "sfx/smalltrek_0.ogg")
+  loadSfx(sfxMove, "sfx/smalltrek_1.ogg")
+  loadSfx(sfxGrab, "sfx/smalltrek_2.ogg")
+  loadSfx(sfxLand, "sfx/smalltrek_3.ogg")
+  loadSfx(sfxTakeoff, "sfx/smalltrek_4.ogg")
+  loadSfx(sfxHeart, "sfx/smalltrek_5.ogg")
+  loadSfx(sfxCross, "sfx/smalltrek_6.ogg")
+  loadSfx(sfxSuccess, "sfx/smalltrek_7.ogg")
+  loadSfx(sfxHyperdrive, "sfx/smalltrek_8.ogg")
+  loadSfx(sfxFailure, "sfx/smalltrek_9.ogg")
+  loadSfx(sfxBump, "sfx/smalltrek_10.ogg")
+  loadSfx(sfxEat, "sfx/smalltrek_11.ogg")
+  loadSfx(sfxCursor, "sfx/smalltrek_12.ogg")
+  loadSfx(sfxAborted, "sfx/smalltrek_13.ogg")
 
   loadMusic(0, "music/overworld.ogg")
   loadMusic(1, "music/underworld.ogg")

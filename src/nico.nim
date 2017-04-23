@@ -425,15 +425,27 @@ proc clip*(x,y,w,h: int = 0) =
     clippingrect.h = min(h, screenHeight - y)
 
 
-proc btn*(b: NicoButton, player: range[0..7] = 0): bool =
+proc btn*(b: NicoButton, player: range[0..7]): bool =
   if player > controllers.high:
     return false
   return controllers[player].btn(b)
 
-proc btnp*(b: NicoButton, player: range[0..7] = 0): bool =
+proc btnp*(b: NicoButton, player: range[0..7]): bool =
   if player > controllers.high:
     return false
   return controllers[player].btnp(b)
+
+proc btn*(b: NicoButton): bool =
+  for c in controllers:
+    if c.btn(b):
+      return true
+  return false
+
+proc btnp*(b: NicoButton): bool =
+  for c in controllers:
+    if c.btnp(b):
+      return true
+  return false
 
 proc jaxis*(axis: NicoAxis, player: range[0..7] = 0): float =
   if player > controllers.high:
@@ -1718,7 +1730,7 @@ proc init*() =
 
   randomize()
 
-  window = createWindow("nico", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, (screenWidth+screenPaddingX*2)*screenScale, (screenHeight+screenPaddingY*2)*screenScale, SDL_WINDOW_SHOWN or SDL_WINDOW_RESIZABLE)
+  window = createWindow("nico", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, (screenWidth+screenPaddingX*2)*screenScale, (screenHeight+screenPaddingY*2)*screenScale,  SDL_WINDOW_RESIZABLE or SDL_WINDOW_FULLSCREEN_DESKTOP)
   render = createRenderer(window, -1, Renderer_Accelerated or Renderer_PresentVsync or Renderer_TargetTexture)
 
   swCanvas = createRGBSurface(0, screenWidth, screenHeight, 8, 0, 0, 0, 0)
