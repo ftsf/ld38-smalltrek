@@ -1560,6 +1560,9 @@ proc loadMap*(filename: string) =
 proc rnd*(x: int): int =
   return random(x)
 
+proc srand*(seed: int) =
+  randomize(seed + 1)
+
 proc rnd*(x: float): float =
   return random(x)
 
@@ -1585,9 +1588,13 @@ proc saveConfig*() =
   echo "saved config to " & basePath & "/config.ini"
 
 proc updateConfigValue*(section, key, value: string) =
+  if config == nil:
+    loadConfig()
   config.setSectionKey(section, key, value)
 
 proc getConfigValue*(section, key: string): string =
+  if config == nil:
+    loadConfig()
   result = config.getSectionValue(section, key)
 
 

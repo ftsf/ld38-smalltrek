@@ -1,4 +1,4 @@
-NIM=/opt/nim/0.15.2/nim/bin/nim
+NIM=nim
 APPNAME=ldbase
 
 $(APPNAME)-debug: src/*.nim

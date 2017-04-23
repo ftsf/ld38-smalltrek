@@ -527,6 +527,18 @@ proc rectCorners*(x0,y0,x1,y1: cint) =
   pset(x0+1,y1)
   pset(x0,y1-1)
 
+proc glitch*(x,y,w,h: int, i = 1) =
+  for j in 0..<i:
+    let fxw = rnd(w-1)
+    let fxh = 2
+    let sx = x + rnd(w-1)
+    let sy = y + rnd(h-1)
+    let dx = x + rnd(w-1)
+    let dy = y + rnd(h-1)
+    copy(sx,sy, sx+fxw, sy+fxh, dx, dy, dx + fxw, dy + fxh)
+
+
+
 import unittest
 
 suite "util":
