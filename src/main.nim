@@ -1139,12 +1139,6 @@ proc menuUpdate(dt: float) =
   let boost = warpUnlocked and btn(pcA)
   let move = if boost: 0.05 else: 0.01
 
-  if btnp(pcB):
-    levelsCompleted[nextLevelId] = 1
-    nextLevelId += 1
-    menuInit()
-    return
-
   if btn(pcLeft):
     menuShip.angle = 0
     menuShip.vel.x -= move
