@@ -1134,7 +1134,21 @@ proc menuInit() =
       menuShip.pos = planet.pos
       break
 
+var confirmQuit: bool
+
 proc menuUpdate(dt: float) =
+
+  if confirmQuit:
+    if btnp(pcBack):
+      shutdown()
+      return
+    if btnp(pcA):
+      confirmQuit = false
+      return
+    return
+  elif btnp(pcBack):
+    confirmQuit = true
+    return
 
   let boost = warpUnlocked and btn(pcA)
   let move = if boost: 0.05 else: 0.01
@@ -1258,6 +1272,12 @@ proc menuUpdate(dt: float) =
 
 proc menuDraw() =
   cls()
+
+  if confirmQuit:
+    setColor(3)
+    printShadowC("QUIT?", 64, 60)
+    printShadowC("[ESC] YES [Z] NO", 64, 70)
+    return
 
   if warpTimer > 0:
     setColor(2)
@@ -1427,7 +1447,8 @@ proc menuDraw() =
 
 proc introInit() =
   setWindowTitle("smalltrek")
-  setTargetSize(128,128)
+  #setTargetSize(128,128)
+  #setScreenSize(128*4,128*4)
   loadSpriteSheet("spritesheet.png")
 
   loadSfx(sfxDrop, "sfx/smalltrek_0.ogg")

@@ -357,11 +357,11 @@ var swCanvas32: SurfacePtr
 
 #var targetScreenWidth = 480
 #var targetScreenHeight = 272
-var targetScreenWidth = 240
-var targetScreenHeight = 136
+var targetScreenWidth = 128
+var targetScreenHeight = 128
 
-var screenWidth* = 480
-var screenHeight* = 272
+var screenWidth* = 128
+var screenHeight* = 128
 
 var screenPaddingX = 0
 var screenPaddingY = 0
@@ -1415,7 +1415,7 @@ proc appHandleEvent(evt: Event) =
         controllers[0].setButtonState(pcY, down)
       of SDL_SCANCODE_RETURN:
         controllers[0].setButtonState(pcStart, down)
-      of SDL_SCANCODE_BACKSPACE, SDL_SCANCODE_DELETE:
+      of SDL_SCANCODE_BACKSPACE, SDL_SCANCODE_DELETE, SDL_SCANCODE_ESCAPE:
         controllers[0].setButtonState(pcBack, down)
       else:
         discard
@@ -1730,7 +1730,7 @@ proc init*() =
 
   randomize()
 
-  window = createWindow("nico", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, (screenWidth+screenPaddingX*2)*screenScale, (screenHeight+screenPaddingY*2)*screenScale,  SDL_WINDOW_RESIZABLE or SDL_WINDOW_FULLSCREEN_DESKTOP)
+  window = createWindow("nico", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, (screenWidth+screenPaddingX*2)*screenScale, (screenHeight+screenPaddingY*2)*screenScale,  SDL_WINDOW_RESIZABLE)
   render = createRenderer(window, -1, Renderer_Accelerated or Renderer_PresentVsync or Renderer_TargetTexture)
 
   swCanvas = createRGBSurface(0, screenWidth, screenHeight, 8, 0, 0, 0, 0)
