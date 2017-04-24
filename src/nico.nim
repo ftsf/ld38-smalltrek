@@ -157,6 +157,7 @@ var timeStep* = 1/frameRate
 var frameMult = 1
 
 var basePath*: string
+var writePath*: string
 
 proc fps*(fps: int) =
   frameRate = fps
@@ -1590,14 +1591,17 @@ import parseCfg
 var config: Config
 
 proc loadConfig*() =
-  # TODO check for config file in user config directioy, use that first
-  config = loadConfig(basePath & "/config.ini")
-  echo "loaded config from " & basePath & "/config.ini"
+  try:
+    config = loadConfig(writePath & "/config.ini")
+    echo "loaded config from " & writePath & "/config.ini"
+  except IOError:
+    config = loadConfig(basePath & "/config.ini")
+    echo "loaded config from " & basePath & "/config.ini"
 
 proc saveConfig*() =
   # TODO write config file in user config directioy
-  config.writeConfig(basePath & "/config.ini")
-  echo "saved config to " & basePath & "/config.ini"
+  config.writeConfig(writePath & "/config.ini")
+  echo "saved config to " & writePath & "/config.ini"
 
 proc updateConfigValue*(section, key, value: string) =
   if config == nil:
@@ -1706,6 +1710,9 @@ proc init*() =
 
   basePath = $sdl2.getBasePath()
   echo "basePath: ", basePath
+
+  writePath = $sdl2.getPrefPath("net.impbox","smalltrek")
+  echo "writePath: ", writePath
 
   addQuitProc(proc() {.noconv.} =
     echo "sdl2 quit"
