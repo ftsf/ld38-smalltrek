@@ -233,6 +233,8 @@ proc drawParticles(above: bool) =
 
 var camera: Vec2f
 
+proc drop(self: var Level)
+
 proc draw(self: Level) =
   # draw planet
   var altitude = ship.altitude
@@ -526,7 +528,7 @@ proc isHappy(self: Alien): bool =
         if obj of Alien and Alien(obj).kind == Tribble:
           obj.killed = true
           if obj == cursorObject:
-            cursorObject = nil
+            currentLevel.drop()
           fed = true
           break
     return fed
@@ -543,7 +545,7 @@ proc isHappy(self: Alien): bool =
             obj.killed = true
             # killed a tribble =(
             if obj == cursorObject:
-              cursorObject = nil
+              currentLevel.drop()
     # check if we have adjacent or aligned other whites
     var tooClose = false
     var aligned = false
@@ -697,6 +699,15 @@ method move(self: Ship, target: Vec2i) =
     return
   procCall move(Movable(self), target)
 
+proc drop(self: var Level) =
+  if cursorObject != nil:
+    sfx(sfxDrop,2)
+    for i in 0..10:
+      particles.add(Particle(kind: dustParticle, pos: (cursorObject.pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.25, maxttl: 0.25, above: false))
+    if cursorObject of Movable and cursorObject.pos != Movable(cursorObject).originalPos:
+      currentLevel.moves += 1
+    cursorObject = nil
+
 proc update(self: var Level, dt: float) =
 
   if confirmAbort:
@@ -744,12 +755,7 @@ proc update(self: var Level, dt: float) =
               Movable(cursorObject).originalPos = obj.pos
         else:
           # drop
-          sfx(sfxDrop,2)
-          for i in 0..10:
-            particles.add(Particle(kind: dustParticle, pos: (cursorObject.pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.25, maxttl: 0.25, above: false))
-          if cursorObject of Movable and cursorObject.pos != Movable(cursorObject).originalPos:
-            currentLevel.moves += 1
-          cursorObject = nil
+          drop()
       elif cursorObject != nil:
         cursorObject.move(cursor + move)
         cursor = cursorObject.pos
@@ -793,6 +799,7 @@ proc update(self: var Level, dt: float) =
 
   if tension <= 0 and not failed:
     if not success:
+      drop()
       success = true
       sfx(sfxSuccess)
     timeout -= dt
@@ -912,7 +919,6 @@ proc gameDraw() =
     printShadowR("tension: $1%".format(tensionPercent), 126, 2 - currentLevel.ship.altitude.int)
 
   if currentLevel.tension <= 0 and not currentLevel.failed:
-    cursorObject = nil
     setColor(2)
     printShadowC("Hostilities Ceased", 64, 100 + (currentLevel.ship.altitude * currentLevel.ship.altitude * 0.005).int)
     printShadowC("Moves: $1".format(currentLevel.moves), 64, 110 + (currentLevel.ship.altitude * currentLevel.ship.altitude * 0.005).int)
