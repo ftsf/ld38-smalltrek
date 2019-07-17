@@ -1,6 +1,6 @@
 import nico
+import nico.vec
 import util
-import glm
 import strutils
 import json
 import tween
@@ -8,6 +8,7 @@ import algorithm
 import sequtils
 import pool
 import math
+import glitch
 
 {.this:self.}
 
@@ -43,8 +44,8 @@ type SFX = enum
   sfxCursor
   sfxAborted
 
-converter toInt*(sfx: SFX): SfxId =
-  return sfx.SfxId
+converter toInt*(sfx: SFX): int =
+  return sfx.int
 
 type ParticleKind = enum
   heartParticle
@@ -56,8 +57,8 @@ type Particle = object
   kind: ParticleKind
   pos: Vec2f
   vel: Vec2f
-  ttl: float
-  maxttl: float
+  ttl: float32
+  maxttl: float32
   above: bool
 
 type Object = ref object of RootObj
@@ -69,13 +70,13 @@ type Object = ref object of RootObj
 
 proc dummyInit()
 proc menuInit()
-proc menuUpdate(dt: float)
+proc menuUpdate(dt: float32)
 proc menuDraw()
 
 method draw(self: Object) {.base.} =
   discard
 
-method update(self: Object, dt: float) {.base.} =
+method update(self: Object, dt: float32) {.base.} =
   discard
 
 type Rock = ref object of Object
@@ -125,10 +126,10 @@ proc newCrystal(pos: Vec2i): Crystal =
 type Movable = ref object of Object
   originalPos: Vec2i
   lastPos: Vec2i
-  alpha: float
+  alpha: float32
 
 type Ship = ref object of Movable
-  altitude: float
+  altitude: float32
 
 type SmallShip = ref object of Ship
 
@@ -151,14 +152,14 @@ proc newSmallShip(pos: Vec2i): SmallShip =
 
 type Star = object
   pos: Vec2f
-  brightness: float
+  brightness: float32
 
 type Level = object
   dimensions: Vec2i
   toroidal: bool
-  tension: float
+  tension: float32
   ship: Ship
-  timeout: float
+  timeout: float32
   moves: int
   failed: bool
   success: bool
@@ -167,14 +168,15 @@ type Level = object
 type Message = object
   text: string
   step: int
-  ttl: float
+  ttl: float32
 
 # GLOBALS
 
+var frame: int
 var levelId: int
 var nextLevelId: int
 var previousLevelId: int = -1
-var unlockedLevel: float
+var unlockedLevel: float32
 var levelsCompleted: array[32, int]
 var currentLevel: Level
 var lastCursor = vec2i(0,0)
@@ -183,8 +185,8 @@ var alpha = 0.0
 var cursorObject: Object
 var objects: seq[Object]
 var stars: seq[Star]
-var shake: float = 0.0
-var time: float = 0.0
+var shake: float32 = 0.0
+var time: float32 = 0.0
 var scanning: bool
 var particles: Pool[Particle]
 var confirmAbort: bool
@@ -194,8 +196,8 @@ var messages: seq[Message]
 var moveBuffer: seq[Vec2i]
 
 proc getViewPos(self: Movable): Vec2i =
-  let currentPos = vec2f(float(pos.x * 16), float(pos.y * 16))
-  let lastPos = vec2f(float(lastPos.x * 16), float(lastPos.y * 16))
+  let currentPos = vec2f(float32(pos.x * 16), float32(pos.y * 16))
+  let lastPos = vec2f(float32(lastPos.x * 16), float32(lastPos.y * 16))
   return tween.easeOutCubic(alpha, lastPos, currentPos - lastPos).vec2i + (if Object(self) == cursorObject: vec2i(0, -4) else: vec2i(0,0))
 
 method draw(self: Ship) =
@@ -286,8 +288,8 @@ proc draw(self: Level) =
     let lastX = lastCursor.x * 16
     let lastY = lastCursor.y * 16
 
-    let x = easeOutCubic(alpha, lastX.float, cx.float - lastX.float).int
-    let y = easeOutCubic(alpha, lastY.float, cy.float - lastY.float).int
+    let x = easeOutCubic(alpha, lastX.float32, cx.float32 - lastX.float32).int
+    let y = easeOutCubic(alpha, lastY.float32, cy.float32 - lastY.float32).int
 
     if scanning:
       setColor(if frame mod 2 < 1: 2 else: 14)
@@ -371,8 +373,6 @@ proc newAlien(kind: AlienKind, pos: Vec2i): Alien =
   of Tribble:
     result.name = "CUWUDLE"
     result.description = "A violently fertile and\nadorably CUTE fluffy creature.\nNeeds to reproduce to be happy."
-  else:
-    discard
 
 
 proc loadLevel(level: int): Level =
@@ -436,7 +436,7 @@ proc loadLevel(level: int): Level =
     cursor = result.ship.pos
     lastCursor = cursor
 
-  sfx(sfxLand,3)
+  sfx(3,sfxLand)
 
 proc objectAtPos(pos: Vec2i): Object =
   for obj in mitems(objects):
@@ -515,7 +515,7 @@ proc isHappy(self: Alien): bool =
     var happy = false
     for obj in getAdjacentObjects(pos):
       if obj of Plant and not Plant(obj).eaten:
-        sfx(sfxEat)
+        sfx(-1,sfxEat)
         Plant(obj).eaten = true
         for i in 0..10:
           particles.add(Particle(kind: dustParticle, pos: (obj.pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.5, maxttl: 0.5, above: true))
@@ -571,11 +571,9 @@ proc isHappy(self: Alien): bool =
       return true
   of Tribble:
     return multiplied
-  else:
-    discard
   return false
 
-method update(self: Movable, dt: float) =
+method update(self: Movable, dt: float32) =
   if lastPos != pos:
     alpha += dt * 8.0
     if frame mod 2 == 0:
@@ -584,7 +582,7 @@ method update(self: Movable, dt: float) =
       lastPos = pos
       alpha = 0.0
 
-method update(self: Alien, dt: float) =
+method update(self: Alien, dt: float32) =
   procCall update(Movable(self), dt)
   if kind == Tribble and frame mod 15 == 0:
     for obj in getAdjacentObjects(pos):
@@ -611,12 +609,12 @@ method update(self: Alien, dt: float) =
   if isHappy():
     if not happy:
       particles.add(Particle(kind: heartParticle, pos: vec2f(pos * 16) + vec2f(8.0, 0.0), vel: vec2f(0, -0.25), ttl: 0.5, maxttl: 0.5, above: true))
-      sfx(sfxHeart,1)
+      sfx(1,sfxHeart)
     happy = true
   else:
     if happy:
       particles.add(Particle(kind: crossParticle, pos: vec2f(pos * 16) + vec2f(8.0, 0.0), vel: vec2f(0, -0.25), ttl: 0.5, maxttl: 0.5, above: true))
-      sfx(sfxCross,1)
+      sfx(1,sfxCross)
     happy = false
 
   if currentLevel.tension <= 0 and not currentLevel.failed and currentLevel.timeout >= 1.9:
@@ -635,26 +633,25 @@ method draw(self: Alien) =
     if multiplied:
       spr(74, viewPos.x.int, viewPos.y.int, 2, 2)
     else:
-      spr(72, viewPos.x.int + cos(frame.float / 30.0 + pos.x.float * 2.1) * 3, viewPos.y.int + sin(frame.float / 40.0 + pos.y.float * 2.1) * 2, 2, 2)
+      spr(72, viewPos.x.int + cos(frame.float32 / 30.0 + pos.x.float32 * 2.1) * 3, viewPos.y.int + sin(frame.float32 / 40.0 + pos.y.float32 * 2.1) * 2, 2, 2)
   else:
     if happy:
       spr(kind.int * 2, viewPos.x.int, viewPos.y.int, 2, 2)
     else:
-      spr(32 + kind.int * 2, viewPos.x.int + cos(frame.float / 30.0 + pos.x.float * 2.1) * 2, viewPos.y.int, 2, 2)
+      spr(32 + kind.int * 2, viewPos.x.int + cos(frame.float32 / 30.0 + pos.x.float32 * 2.1) * 2, viewPos.y.int, 2, 2)
   pal(0,0)
 
-method update(self: Ship, dt: float) =
+method update(self: Ship, dt: float32) =
   if (currentLevel.success or currentLevel.failed or currentLevel.aborted) and currentLevel.timeout <= 0:
     if altitude == 0:
-      sfx(sfxTakeoff,3)
-      fadeMusicOut(3000)
+      sfx(3,sfxTakeoff)
     # taking off
     shake += 0.5
     altitude = lerp(altitude, 128, 0.01)
     if altitude < 10 and altitude > 1:
       particles.add(Particle(kind: dustParticle, pos: (pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.5, maxttl: 0.5, above: false))
     if altitude.int == 100:
-      sfx(sfxHyperdrive,3)
+      sfx(3,sfxHyperdrive)
       altitude = 101
 
   else:
@@ -666,14 +663,13 @@ method update(self: Ship, dt: float) =
         particles.add(Particle(kind: dustParticle, pos: (pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.5, maxttl: 0.5, above: false))
       if altitude < 1.0:
         altitude = 0
-        sfx(sfxDrop,2)
-        fadeMusicIn(1, 500)
+        sfx(2,sfxDrop)
     if altitude == 0:
       procCall update(Movable(self), dt)
 
 method move(self: Object, target: Vec2i) {.base.} =
   shake += 1.0
-  sfx(sfxBump, 2)
+  sfx(2,sfxBump)
   return
 
 method move(self: Movable, target: Vec2i) =
@@ -681,14 +677,14 @@ method move(self: Movable, target: Vec2i) =
     return
   if target.x < 0 or target.y < 0 or target.x > currentLevel.dimensions.x - 1 or target.y > currentLevel.dimensions.y - 1:
     shake += 1.0
-    sfx(sfxBump, 2)
+    sfx(2,sfxBump)
     return
   if objectAtPos(target) == nil:
     pos = target
-    sfx(sfxMove,2)
+    sfx(2,sfxMove)
     alpha = 0.0
   else:
-    sfx(sfxBump, 2)
+    sfx(2,sfxBump)
     shake += 1.0
 
   objects.sort() do(a,b: Object) -> int:
@@ -701,14 +697,14 @@ method move(self: Ship, target: Vec2i) =
 
 proc drop(self: var Level) =
   if cursorObject != nil:
-    sfx(sfxDrop,2)
+    sfx(2,sfxDrop)
     for i in 0..10:
       particles.add(Particle(kind: dustParticle, pos: (cursorObject.pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.25, maxttl: 0.25, above: false))
     if cursorObject of Movable and cursorObject.pos != Movable(cursorObject).originalPos:
       currentLevel.moves += 1
     cursorObject = nil
 
-proc update(self: var Level, dt: float) =
+proc update(self: var Level, dt: float32) =
 
   if confirmAbort:
     if btnp(pcA):
@@ -721,7 +717,7 @@ proc update(self: var Level, dt: float) =
       confirmAbort = false
       aborted = true
       timeout = 0.5
-      sfx(sfxAborted)
+      sfx(-1,sfxAborted)
       return
     return
 
@@ -750,7 +746,7 @@ proc update(self: var Level, dt: float) =
           let obj = objectAtPos(cursor)
           cursorObject = obj
           if cursorObject != nil:
-            sfx(sfxGrab,2)
+            sfx(2,sfxGrab)
             if cursorObject of Movable:
               Movable(cursorObject).originalPos = obj.pos
         else:
@@ -761,7 +757,7 @@ proc update(self: var Level, dt: float) =
         cursor = cursorObject.pos
         alpha = 0.0
       else:
-        sfx(sfxCursor,2)
+        sfx(2,sfxCursor)
         cursor += move
         cursor.x = clamp(cursor.x, 0, dimensions.x - 1)
         cursor.y = clamp(cursor.y, 0, dimensions.y - 1)
@@ -801,7 +797,7 @@ proc update(self: var Level, dt: float) =
     if not success:
       drop()
       success = true
-      sfx(sfxSuccess)
+      sfx(-1,sfxSuccess)
     timeout -= dt
     if timeout < 0 and ship.altitude > 120:
       levelsCompleted[levelId] = moves
@@ -846,12 +842,12 @@ proc gameInit() =
 
   time = 0.0
 
-proc gameUpdate(dt: float) =
+proc gameUpdate(dt: float32) =
   time += dt
 
   for star in mitems(stars):
-    star.pos.x += cos(frame.float / 100.0) * dt
-    star.pos.y += sin(frame.float / 110.0) * dt
+    star.pos.x += cos(frame.float32 / 100.0) * dt
+    star.pos.y += sin(frame.float32 / 110.0) * dt
 
   currentLevel.update(dt)
 
@@ -874,6 +870,7 @@ proc rectCorners(x,y,w,h: cint) =
   pset(x,y+h-1)
 
 proc gameDraw() =
+  frame+=1
   # background
   setCamera()
   cls()
@@ -904,7 +901,7 @@ proc gameDraw() =
     setColor(if frame mod 4 < 2: 2 else: 14)
     printShadowR("scanning", 126, 2)
   else:
-    let targetTension = sad.float / (happy + sad).float
+    let targetTension = sad.float32 / (happy + sad).float32
     currentLevel.tension = lerp(currentLevel.tension, targetTension, 0.1)
 
     let tensionPercent = (currentLevel.tension * 100.0).int
@@ -972,7 +969,7 @@ const planetColors = [
 type Planet = object
   level: int
   pos: Vec2f
-  z: float
+  z: float32
   size: int
   color: int
 
@@ -982,12 +979,12 @@ menuShip.pos = vec2f(64.0,64.0)
 var quadrant: int = 0
 var planets: seq[Planet]
 var closestPlanet: ptr Planet
-var warpTimer: float
-var quadrantTimer: float
+var warpTimer: float32
+var quadrantTimer: float32
 var quadrantInitialized = false
 
 proc setQuadrant(quadrant: range[0..3], jump: bool = true) =
-  srand(quadrant)
+  srand(quadrant+1)
   stars = newSeq[Star]()
   for i in 0..100:
     stars.add(Star(pos: rndVec(128.0+64.0) + 64.0, brightness: rnd(2.0)))
@@ -1010,7 +1007,7 @@ proc setQuadrant(quadrant: range[0..3], jump: bool = true) =
 
   if jump:
     warpTimer = 0.5
-    sfx(sfxHyperdrive)
+    sfx(-1,sfxHyperdrive)
 
 proc dummyInit() =
   menuShip.vel = vec2f(0,0)
@@ -1023,8 +1020,6 @@ proc menuInit() =
   messages = newSeq[Message]()
 
   unlockedLevel = 0
-
-  fadeMusicIn(0, 500)
 
   warpUnlocked = try: parseBool(getConfigValue("Unlocks","warp")) except: false
 
@@ -1142,7 +1137,7 @@ proc menuInit() =
 
 var confirmQuit: bool
 
-proc menuUpdate(dt: float) =
+proc menuUpdate(dt: float32) =
 
   if confirmQuit:
     if btnp(pcBack):
@@ -1201,18 +1196,18 @@ proc menuUpdate(dt: float) =
   menuShip.pos.y = menuShip.pos.y mod 128.0
 
   for star in mitems(stars):
-    star.pos.x += cos(frame.float / 100.0) * dt + -menuShip.vel.x * 0.1 * (star.brightness + 1.0)
-    star.pos.y += sin(frame.float / 110.0) * dt + -menuShip.vel.y * 0.1 * (star.brightness + 1.0)
+    star.pos.x += cos(frame.float32 / 100.0) * dt + -menuShip.vel.x * 0.1 * (star.brightness + 1.0)
+    star.pos.y += sin(frame.float32 / 110.0) * dt + -menuShip.vel.y * 0.1 * (star.brightness + 1.0)
 
     star.pos.x = star.pos.x mod 256.0
     star.pos.y = star.pos.y mod 256.0
 
   let oldClosestPlanet = closestPlanet
   closestPlanet = nil
-  var nearestDistance: float = Inf
+  var nearestDistance: float32 = Inf
   for planet in mitems(planets):
-    planet.pos.x += cos(frame.float / 100.0) * dt + -menuShip.vel.x * 0.1 * ((planet.z).float * 10.0)
-    planet.pos.y += sin(frame.float / 110.0) * dt + -menuShip.vel.y * 0.1 * ((planet.z).float * 10.0)
+    planet.pos.x += cos(frame.float32 / 100.0) * dt + -menuShip.vel.x * 0.1 * ((planet.z).float32 * 10.0)
+    planet.pos.y += sin(frame.float32 / 110.0) * dt + -menuShip.vel.y * 0.1 * ((planet.z).float32 * 10.0)
 
     planet.pos.x = planet.pos.x mod 128.0
     planet.pos.y = planet.pos.y mod 128.0
@@ -1222,27 +1217,26 @@ proc menuUpdate(dt: float) =
       if dist < nearestDistance:
         closestPlanet = planet.addr
         nearestDistance = dist
-        #and (planet.pos - menuShip.pos).length < (planet.size + 10).float:
+        #and (planet.pos - menuShip.pos).length < (planet.size + 10).float32:
 
   if messages.len > 0:
     alias m, messages[messages.low]
     if btn(pcA) or btn(pcX):
       if m.step < m.text.len:
         m.step += 1
-        if not m.text[m.step].isSpaceAscii:
-          sfx(sfxCursor)
+        if not m.text[m.step-1].isSpaceAscii:
+          sfx(-1,sfxCursor)
         else:
           m.step += 1
     if btnp(pcA) or btnp(pcX):
       if m.step >= m.text.len:
         m.ttl = 0
-        sfx(sfxHeart)
+        sfx(-1,sfxHeart)
   elif closestPlanet != nil and (closestPlanet.pos - menuShip.pos).length < 10.0 and menuShip.vel.length < 0.5:
     if btnp(pcX):
       if closestPlanet.level >= 0:
         levelId = closestPlanet.level
         # start level
-        fadeMusicOut(250)
         nico.run(gameInit, gameUpdate, gameDraw)
       else:
         # must be starbase
@@ -1260,7 +1254,7 @@ proc menuUpdate(dt: float) =
                 happyPlanets += 1
               else:
                 unhappyPlanets += 1
-          let unrest = ((unhappyPlanets.float / (happyPlanets + unhappyPlanets).float) * 100.0).int
+          let unrest = ((unhappyPlanets.float32 / (happyPlanets + unhappyPlanets).float32) * 100.0).int
           if unrest == 0:
             messages.add(Message(text: "Alpha quadrant is secure\nthanks to you.\nHead to the Beta Quadrant!", step: 0, ttl: 5.0))
           else:
@@ -1268,7 +1262,7 @@ proc menuUpdate(dt: float) =
 
     # apply gravity
     let diff = closestPlanet.pos - menuShip.pos
-    let dir = diff.normalize()
+    let dir = diff.normalized
     let dist = diff.length
     menuShip.vel += dir * sqrt(dist) * 0.001
 
@@ -1277,6 +1271,7 @@ proc menuUpdate(dt: float) =
 
 
 proc menuDraw() =
+  frame+=1
   cls()
 
   if confirmQuit:
@@ -1315,7 +1310,7 @@ proc menuDraw() =
   else: 0)
   circfill(64,64,sunsize)
   setColor(2)
-  circfill(64,64,(sunsize.float * 0.75).int + (sin(frame.float / 100.0) * 3.0).int)
+  circfill(64,64,(sunsize.float32 * 0.75).int + (sin(frame.float32 / 100.0) * 3.0).int)
 
   # draw planets
   for planet in mitems(planets):
@@ -1330,21 +1325,21 @@ proc menuDraw() =
 
     if planet.level == nextLevelId:
       setColor(3)
-      circ(planet.pos.x.int, planet.pos.y.int, planet.size + 1 + ((frame.float mod 100.0)/100.0) * 10)
+      circ(planet.pos.x.int, planet.pos.y.int, planet.size + 1 + ((frame.float32 mod 100.0)/100.0) * 10)
 
 
   if closestPlanet != nil and (closestPlanet.pos - menuShip.pos).length < 10.0:
     let planet = closestPlanet[]
     setColor(14)
-    circ(planet.pos.x.int, planet.pos.y.int, planet.size + 5 - ((frame.float mod 30.0)/30.0) * 5)
+    circ(planet.pos.x.int, planet.pos.y.int, planet.size + 5 - ((frame.float32 mod 30.0)/30.0) * 5)
 
   # beacons from other quadrants
   if nextLevelId >= (quadrant + 1) * 8:
     setColor(3)
-    circ(128+32, 64, ((frame.float mod 100.0)/100.0) * 64)
+    circ(128+32, 64, ((frame.float32 mod 100.0)/100.0) * 64)
   elif nextLevelId < quadrant * 8:
     setColor(3)
-    circ(-32, 64, ((frame.float mod 100.0)/100.0) * 64)
+    circ(-32, 64, ((frame.float32 mod 100.0)/100.0) * 64)
 
 
   # draw ship
@@ -1393,15 +1388,15 @@ proc menuDraw() =
 
     if frame mod 4 == 0 and m.step < m.text.len:
       m.step += 1
-      if not m.text[m.step].isSpaceAscii:
-        sfx(sfxCursor)
+      if not m.text[m.step-1].isSpaceAscii:
+        sfx(-1,sfxCursor)
       else:
         m.step += 1
 
     if m.step >= m.text.high:
       m.ttl -= timeStep
     setColor(8)
-    let text = m.text[0..m.step]
+    let text = m.text[0..min(m.text.high,m.step)]
     var yv = 2
     for line in text.splitLines:
       printShadow(line, 2, yv)
@@ -1455,22 +1450,26 @@ proc introInit() =
   setWindowTitle("smalltrek")
   #setTargetSize(128,128)
   #setScreenSize(128*4,128*4)
-  loadSpriteSheet("spritesheet.png")
+  setPalette(loadPaletteFromGPL("palette.gpl"))
+  loadSpriteSheet(0,"spritesheet.png")
 
-  loadSfx(sfxDrop, "sfx/smalltrek_0.ogg")
-  loadSfx(sfxMove, "sfx/smalltrek_1.ogg")
-  loadSfx(sfxGrab, "sfx/smalltrek_2.ogg")
-  loadSfx(sfxLand, "sfx/smalltrek_3.ogg")
-  loadSfx(sfxTakeoff, "sfx/smalltrek_4.ogg")
-  loadSfx(sfxHeart, "sfx/smalltrek_5.ogg")
-  loadSfx(sfxCross, "sfx/smalltrek_6.ogg")
-  loadSfx(sfxSuccess, "sfx/smalltrek_7.ogg")
-  loadSfx(sfxHyperdrive, "sfx/smalltrek_8.ogg")
-  loadSfx(sfxFailure, "sfx/smalltrek_9.ogg")
-  loadSfx(sfxBump, "sfx/smalltrek_10.ogg")
-  loadSfx(sfxEat, "sfx/smalltrek_11.ogg")
-  loadSfx(sfxCursor, "sfx/smalltrek_12.ogg")
-  loadSfx(sfxAborted, "sfx/smalltrek_13.ogg")
+  loadFont(0, "font.png")
+  setFont(0)
+
+  loadSfx(sfxDrop.int, "sfx/smalltrek_0.ogg")
+  loadSfx(sfxMove.int, "sfx/smalltrek_1.ogg")
+  loadSfx(sfxGrab.int, "sfx/smalltrek_2.ogg")
+  loadSfx(sfxLand.int, "sfx/smalltrek_3.ogg")
+  loadSfx(sfxTakeoff.int, "sfx/smalltrek_4.ogg")
+  loadSfx(sfxHeart.int, "sfx/smalltrek_5.ogg")
+  loadSfx(sfxCross.int, "sfx/smalltrek_6.ogg")
+  loadSfx(sfxSuccess.int, "sfx/smalltrek_7.ogg")
+  loadSfx(sfxHyperdrive.int, "sfx/smalltrek_8.ogg")
+  loadSfx(sfxFailure.int, "sfx/smalltrek_9.ogg")
+  loadSfx(sfxBump.int, "sfx/smalltrek_10.ogg")
+  loadSfx(sfxEat.int, "sfx/smalltrek_11.ogg")
+  loadSfx(sfxCursor.int, "sfx/smalltrek_12.ogg")
+  loadSfx(sfxAborted.int, "sfx/smalltrek_13.ogg")
 
   loadMusic(0, "music/overworld.ogg")
   loadMusic(1, "music/underworld.ogg")
@@ -1480,7 +1479,7 @@ proc introInit() =
   frame = 0
 
 
-proc introUpdate(dt: float) =
+proc introUpdate(dt: float32) =
   if btnp(pcStart) or btnp(pcA):
     if frame < 300:
       frame = 300
@@ -1490,13 +1489,14 @@ proc introUpdate(dt: float) =
 var drippiness = 1000
 
 proc introDraw() =
+  frame+=1
   if frame < 300:
     if frame == 60:
       cls()
-      sfx(sfxDrop)
+      sfx(0,sfxDrop)
       sspr(88,104, 24,24, 64 - 12, 64 - 12, 24, 24)
     elif frame == 120:
-      sfx(sfxDrop)
+      sfx(0,sfxDrop)
       setColor(2)
       printShadowC("ld38", 64, 92)
     elif drippiness > 0:
@@ -1524,5 +1524,6 @@ proc introDraw() =
     if frame == 600:
       nico.run(menuInit, menuUpdate, menuDraw)
 
-nico.init()
+nico.init("impbox","smalltrek")
+nico.createWindow("smalltrek", 128,128,4,false)
 nico.run(introInit, introUpdate, introDraw)
