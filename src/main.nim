@@ -436,7 +436,7 @@ proc loadLevel(level: int): Level =
     cursor = result.ship.pos
     lastCursor = cursor
 
-  sfx(3,sfxLand)
+  sfx(3,sfxLand.int)
 
 proc objectAtPos(pos: Vec2i): Object =
   for obj in mitems(objects):
@@ -515,7 +515,7 @@ proc isHappy(self: Alien): bool =
     var happy = false
     for obj in getAdjacentObjects(pos):
       if obj of Plant and not Plant(obj).eaten:
-        sfx(-1,sfxEat)
+        sfx(-1,sfxEat.int)
         Plant(obj).eaten = true
         for i in 0..10:
           particles.add(Particle(kind: dustParticle, pos: (obj.pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.5, maxttl: 0.5, above: true))
@@ -609,12 +609,12 @@ method update(self: Alien, dt: float32) =
   if isHappy():
     if not happy:
       particles.add(Particle(kind: heartParticle, pos: vec2f(pos * 16) + vec2f(8.0, 0.0), vel: vec2f(0, -0.25), ttl: 0.5, maxttl: 0.5, above: true))
-      sfx(1,sfxHeart)
+      sfx(1,sfxHeart.int)
     happy = true
   else:
     if happy:
       particles.add(Particle(kind: crossParticle, pos: vec2f(pos * 16) + vec2f(8.0, 0.0), vel: vec2f(0, -0.25), ttl: 0.5, maxttl: 0.5, above: true))
-      sfx(1,sfxCross)
+      sfx(1,sfxCross.int)
     happy = false
 
   if currentLevel.tension <= 0 and not currentLevel.failed and currentLevel.timeout >= 1.9:
@@ -644,14 +644,14 @@ method draw(self: Alien) =
 method update(self: Ship, dt: float32) =
   if (currentLevel.success or currentLevel.failed or currentLevel.aborted) and currentLevel.timeout <= 0:
     if altitude == 0:
-      sfx(3,sfxTakeoff)
+      sfx(3,sfxTakeoff.int)
     # taking off
     shake += 0.5
     altitude = lerp(altitude, 128, 0.01)
     if altitude < 10 and altitude > 1:
       particles.add(Particle(kind: dustParticle, pos: (pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.5, maxttl: 0.5, above: false))
     if altitude.int == 100:
-      sfx(3,sfxHyperdrive)
+      sfx(3,sfxHyperdrive.int)
       altitude = 101
 
   else:
@@ -663,13 +663,13 @@ method update(self: Ship, dt: float32) =
         particles.add(Particle(kind: dustParticle, pos: (pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.5, maxttl: 0.5, above: false))
       if altitude < 1.0:
         altitude = 0
-        sfx(2,sfxDrop)
+        sfx(2,sfxDrop.int)
     if altitude == 0:
       procCall update(Movable(self), dt)
 
 method move(self: Object, target: Vec2i) {.base.} =
   shake += 1.0
-  sfx(2,sfxBump)
+  sfx(2,sfxBump.int)
   return
 
 method move(self: Movable, target: Vec2i) =
@@ -677,14 +677,14 @@ method move(self: Movable, target: Vec2i) =
     return
   if target.x < 0 or target.y < 0 or target.x > currentLevel.dimensions.x - 1 or target.y > currentLevel.dimensions.y - 1:
     shake += 1.0
-    sfx(2,sfxBump)
+    sfx(2,sfxBump.int)
     return
   if objectAtPos(target) == nil:
     pos = target
-    sfx(2,sfxMove)
+    sfx(2,sfxMove.int)
     alpha = 0.0
   else:
-    sfx(2,sfxBump)
+    sfx(2,sfxBump.int)
     shake += 1.0
 
   objects.sort() do(a,b: Object) -> int:
@@ -697,7 +697,7 @@ method move(self: Ship, target: Vec2i) =
 
 proc drop(self: var Level) =
   if cursorObject != nil:
-    sfx(2,sfxDrop)
+    sfx(2,sfxDrop.int)
     for i in 0..10:
       particles.add(Particle(kind: dustParticle, pos: (cursorObject.pos * 16).vec2f + vec2f(8.0, 8.0), vel: rndVec(1.0), ttl: 0.25, maxttl: 0.25, above: false))
     if cursorObject of Movable and cursorObject.pos != Movable(cursorObject).originalPos:
@@ -717,7 +717,7 @@ proc update(self: var Level, dt: float32) =
       confirmAbort = false
       aborted = true
       timeout = 0.5
-      sfx(-1,sfxAborted)
+      sfx(-1,sfxAborted.int)
       return
     return
 
@@ -746,7 +746,7 @@ proc update(self: var Level, dt: float32) =
           let obj = objectAtPos(cursor)
           cursorObject = obj
           if cursorObject != nil:
-            sfx(2,sfxGrab)
+            sfx(2,sfxGrab.int)
             if cursorObject of Movable:
               Movable(cursorObject).originalPos = obj.pos
         else:
@@ -757,7 +757,7 @@ proc update(self: var Level, dt: float32) =
         cursor = cursorObject.pos
         alpha = 0.0
       else:
-        sfx(2,sfxCursor)
+        sfx(2,sfxCursor.int)
         cursor += move
         cursor.x = clamp(cursor.x, 0, dimensions.x - 1)
         cursor.y = clamp(cursor.y, 0, dimensions.y - 1)
@@ -797,7 +797,7 @@ proc update(self: var Level, dt: float32) =
     if not success:
       drop()
       success = true
-      sfx(-1,sfxSuccess)
+      sfx(-1,sfxSuccess.int)
     timeout -= dt
     if timeout < 0 and ship.altitude > 120:
       levelsCompleted[levelId] = moves
@@ -1007,7 +1007,7 @@ proc setQuadrant(quadrant: range[0..3], jump: bool = true) =
 
   if jump:
     warpTimer = 0.5
-    sfx(-1,sfxHyperdrive)
+    sfx(-1,sfxHyperdrive.int)
 
 proc dummyInit() =
   menuShip.vel = vec2f(0,0)
@@ -1225,13 +1225,13 @@ proc menuUpdate(dt: float32) =
       if m.step < m.text.len:
         m.step += 1
         if not m.text[m.step-1].isSpaceAscii:
-          sfx(-1,sfxCursor)
+          sfx(-1,sfxCursor.int)
         else:
           m.step += 1
     if btnp(pcA) or btnp(pcX):
       if m.step >= m.text.len:
         m.ttl = 0
-        sfx(-1,sfxHeart)
+        sfx(-1,sfxHeart.int)
   elif closestPlanet != nil and (closestPlanet.pos - menuShip.pos).length < 10.0 and menuShip.vel.length < 0.5:
     if btnp(pcX):
       if closestPlanet.level >= 0:
@@ -1389,7 +1389,7 @@ proc menuDraw() =
     if frame mod 4 == 0 and m.step < m.text.len:
       m.step += 1
       if not m.text[m.step-1].isSpaceAscii:
-        sfx(-1,sfxCursor)
+        sfx(-1,sfxCursor.int)
       else:
         m.step += 1
 
@@ -1493,10 +1493,10 @@ proc introDraw() =
   if frame < 300:
     if frame == 60:
       cls()
-      sfx(0,sfxDrop)
+      sfx(0,sfxDrop.int)
       sspr(88,104, 24,24, 64 - 12, 64 - 12, 24, 24)
     elif frame == 120:
-      sfx(0,sfxDrop)
+      sfx(0,sfxDrop.int)
       setColor(2)
       printShadowC("ld38", 64, 92)
     elif drippiness > 0:
