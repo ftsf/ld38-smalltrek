@@ -1193,6 +1193,8 @@ proc menuUpdate(dt: float32) =
     shake += 0.5
 
   #menuShip.pos.x = menuShip.pos.x mod 128.0
+  if menuShip.pos.y < 0.0:
+    menuShip.pos.y += 128.0
   menuShip.pos.y = menuShip.pos.y mod 128.0
 
   for star in mitems(stars):
