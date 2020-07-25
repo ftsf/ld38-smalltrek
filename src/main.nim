@@ -1206,8 +1206,8 @@ proc menuUpdate(dt: float32) =
   closestPlanet = nil
   var nearestDistance: float32 = Inf
   for planet in mitems(planets):
-    planet.pos.x += cos(frame.float32 / 100.0) * dt + -menuShip.vel.x * 0.1 * ((planet.z).float32 * 10.0)
-    planet.pos.y += sin(frame.float32 / 110.0) * dt + -menuShip.vel.y * 0.1 * ((planet.z).float32 * 10.0)
+    planet.pos.x += cos(frame.float32 / 100.0) * dt + -menuShip.vel.x * 0.1 * ((planet.z).float32 * 10.0) + 128.0
+    planet.pos.y += sin(frame.float32 / 110.0) * dt + -menuShip.vel.y * 0.1 * ((planet.z).float32 * 10.0) + 128.0
 
     planet.pos.x = planet.pos.x mod 128.0
     planet.pos.y = planet.pos.y mod 128.0
