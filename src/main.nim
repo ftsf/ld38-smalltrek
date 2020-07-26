@@ -665,10 +665,11 @@ method update(self: Ship, dt: float32) =
   if (currentLevel.success or currentLevel.failed or currentLevel.aborted) and currentLevel.timeout <= 0:
     if altitude == 0:
       sfx(3,sfxTakeoff.int)
-      gameStatsCollected[GameStats.Eradicated] += 1
-      updateConfigValue("Stats", $GameStats.Eradicated, $gameStatsCollected[GameStats.Eradicated])
-      saveConfig();
-      updateTrophies()
+      if currentLevel.failed:
+        gameStatsCollected[GameStats.Eradicated] += 1
+        updateConfigValue("Stats", $GameStats.Eradicated, $gameStatsCollected[GameStats.Eradicated])
+        saveConfig();
+        updateTrophies()
     # taking off
     shake += 0.5
     altitude = lerp(altitude, 128, 0.01)
