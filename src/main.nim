@@ -206,12 +206,20 @@ var moveBuffer: seq[Vec2i]
 proc updateTrophies() =
   var num : cint = 0
   gamerzilla.getTrophyStat(gameID, "Peace!", num.addr)
-  var tmp : cint = 0
+  var total : cint = 0
   for i in 0..<levelsCompleted.len:
+    if i == 8:
+      gamerzilla.setTrophyStat(gameID, "Alpha Quadrant", total)
+    if i == 16:
+      gamerzilla.setTrophyStat(gameID, "Beta Quadrant", total)
+    if i == 24:
+      gamerzilla.setTrophyStat(gameID, "Delta Quadrant", total)
     if levelsCompleted[i] > 0:
-      tmp += 1
-  if tmp > num:
-    gamerzilla.setTrophyStat(gameID, "Peace!", tmp)
+      total += 1
+    if levelsCompleted[i] >= 45:
+      gamerzilla.setTrophy(gameID, "Rearrange Chairs")
+  if total > num:
+    gamerzilla.setTrophyStat(gameID, "Peace!", total)
   if gameStatsCollected[GameStats.Eradicated] > 0:
     gamerzilla.setTrophy(gameID, "You Monster")
 
