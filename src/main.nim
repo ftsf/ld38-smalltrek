@@ -9,6 +9,8 @@ import sequtils
 import pool
 import math
 import glitch
+import gamerzilla
+import sdl2/sdl
 
 {.this:self.}
 
@@ -170,6 +172,9 @@ type Message = object
   step: int
   ttl: float32
 
+type GameStats {.pure.} = enum
+  Eradicated
+
 # GLOBALS
 
 var frame: int
@@ -178,6 +183,7 @@ var nextLevelId: int
 var previousLevelId: int = -1
 var unlockedLevel: float32
 var levelsCompleted: array[32, int]
+var gameStatsCollected: array[GameStats, int]
 var currentLevel: Level
 var lastCursor = vec2i(0,0)
 var cursor = vec2i(0,0)
@@ -192,8 +198,22 @@ var particles: Pool[Particle]
 var confirmAbort: bool
 var warpUnlocked: bool
 var messages: seq[Message]
+var gameID: int
 
 var moveBuffer: seq[Vec2i]
+
+
+proc updateTrophies() =
+  var num : cint = 0
+  gamerzilla.getTrophyStat(gameID, "Peace!", num.addr)
+  var tmp : cint = 0
+  for i in 0..<levelsCompleted.len:
+    if levelsCompleted[i] > 0:
+      tmp += 1
+  if tmp > num:
+    gamerzilla.setTrophyStat(gameID, "Peace!", tmp)
+  if gameStatsCollected[GameStats.Eradicated] > 0:
+    gamerzilla.setTrophy(gameID, "You Monster")
 
 proc getViewPos(self: Movable): Vec2i =
   let currentPos = vec2f(float32(pos.x * 16), float32(pos.y * 16))
@@ -645,6 +665,10 @@ method update(self: Ship, dt: float32) =
   if (currentLevel.success or currentLevel.failed or currentLevel.aborted) and currentLevel.timeout <= 0:
     if altitude == 0:
       sfx(3,sfxTakeoff.int)
+      gameStatsCollected[GameStats.Eradicated] += 1
+      updateConfigValue("Stats", $GameStats.Eradicated, $gameStatsCollected[GameStats.Eradicated])
+      saveConfig();
+      updateTrophies()
     # taking off
     shake += 0.5
     altitude = lerp(altitude, 128, 0.01)
@@ -821,8 +845,6 @@ proc update(self: var Level, dt: float32) =
     else:
       p.pos += p.vel
       p.vel *= 0.98
-
-
 
 proc gameInit() =
   #setWindowTitle("smalltrek")
@@ -1031,6 +1053,11 @@ proc menuInit() =
     levelsCompleted[i] = try: parseInt(getConfigValue("Levels", $i)) except: 0
     if levelsCompleted[i] > 0:
       unlockedLevel += 1.25
+  updateTrophies()
+
+  for i in low(GameStats)..high(GameStats):
+    gameStatsCollected[i] = try: parseInt(getConfigValue("Stats", $i)) except: 0
+  updateTrophies()
 
   nextLevelId = 33
   for i in 0..<levelsCompleted.len:
@@ -1527,5 +1554,7 @@ proc introDraw() =
       nico.run(menuInit, menuUpdate, menuDraw)
 
 nico.init("impbox","smalltrek")
+gamerzilla.start(0, $sdl.getPrefPath("impbox","smalltrek"))
+gameID = int gamerzilla.setGameFromFile("assets/gamerzilla/smalltrek.game", "./assets/")
 nico.createWindow("smalltrek", 128,128,4,false)
 nico.run(introInit, introUpdate, introDraw)
