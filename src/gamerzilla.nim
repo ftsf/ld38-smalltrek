@@ -14,7 +14,7 @@ elif defined macosx:
 
 else:
 
-  decl(GAMERZILLA_LIB, "libgamerzilla.so")
+  decl(GAMERZILLA_LIB, "libgamerzilla.so.0")
 
 proc start*(server: cint, savedir: cstring): cint {.
     cdecl, importc: "GamerzillaStart", dynlib: GAMERZILLA_LIB, discardable.}
