@@ -9,7 +9,8 @@ import sequtils
 import pool
 import math
 import glitch
-import gamerzilla
+when defined gamerzillasupport:
+  import gamerzilla
 import sdl2/sdl
 
 {.this:self.}
@@ -204,24 +205,25 @@ var moveBuffer: seq[Vec2i]
 
 
 proc updateTrophies() =
-  var num : cint = 0
-  gamerzilla.getTrophyStat(gameID, "Peace!", num.addr)
-  var total : cint = 0
-  for i in 0..<levelsCompleted.len:
-    if i == 8:
-      gamerzilla.setTrophyStat(gameID, "Alpha Quadrant", total)
-    if i == 16:
-      gamerzilla.setTrophyStat(gameID, "Beta Quadrant", total)
-    if i == 24:
-      gamerzilla.setTrophyStat(gameID, "Delta Quadrant", total)
-    if levelsCompleted[i] > 0:
-      total += 1
-    if levelsCompleted[i] >= 45:
-      gamerzilla.setTrophy(gameID, "Rearrange Chairs")
-  if total > num:
-    gamerzilla.setTrophyStat(gameID, "Peace!", total)
-  if gameStatsCollected[GameStats.Eradicated] > 0:
-    gamerzilla.setTrophy(gameID, "You Monster")
+  when defined gamerzillasupport:
+    var num : cint = 0
+    gamerzilla.getTrophyStat(gameID, "Peace!", num.addr)
+    var total : cint = 0
+    for i in 0..<levelsCompleted.len:
+      if i == 8:
+        gamerzilla.setTrophyStat(gameID, "Alpha Quadrant", total)
+      if i == 16:
+        gamerzilla.setTrophyStat(gameID, "Beta Quadrant", total)
+      if i == 24:
+        gamerzilla.setTrophyStat(gameID, "Delta Quadrant", total)
+      if levelsCompleted[i] > 0:
+        total += 1
+      if levelsCompleted[i] >= 45:
+        gamerzilla.setTrophy(gameID, "Rearrange Chairs")
+    if total > num:
+      gamerzilla.setTrophyStat(gameID, "Peace!", total)
+    if gameStatsCollected[GameStats.Eradicated] > 0:
+      gamerzilla.setTrophy(gameID, "You Monster")
 
 proc getViewPos(self: Movable): Vec2i =
   let currentPos = vec2f(float32(pos.x * 16), float32(pos.y * 16))
@@ -1563,7 +1565,8 @@ proc introDraw() =
       nico.run(menuInit, menuUpdate, menuDraw)
 
 nico.init("impbox","smalltrek")
-gamerzilla.start(0, $sdl.getPrefPath("impbox","smalltrek"))
-gameID = int gamerzilla.setGameFromFile("assets/gamerzilla/smalltrek.game", "./assets/")
+when defined gamerzillasupport:
+  gamerzilla.start(0, $sdl.getPrefPath("impbox","smalltrek"))
+  gameID = int gamerzilla.setGameFromFile("assets/gamerzilla/smalltrek.game", "./assets/")
 nico.createWindow("smalltrek", 128,128,4,false)
 nico.run(introInit, introUpdate, introDraw)

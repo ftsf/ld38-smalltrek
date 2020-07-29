@@ -5,10 +5,10 @@ DATE=$(shell date +%Y-%m-%d)
 SOURCES = $(shell find src -name '*.nim')
 
 $(APPNAME)-debug: src/*.nim
-	$(NIMC) c -d:debug -o:$@ src/main.nim
+	$(NIMC) c -d:debug -d:gamerzillasupport -o:$@ src/main.nim
 
 $(APPNAME): src/*.nim
-	$(NIMC) c -d:release -o:$@ src/main.nim
+	$(NIMC) c -d:release -d:gamerzillasupport -o:$@ src/main.nim
 
 clean:
 	rm -vrf src/nimcache $(APPNAME) $(APPNAME)-debug || true
@@ -20,7 +20,7 @@ rund: $(APPNAME)-debug
 	./$(APPNAME)-debug
 
 windows: $(SOURCES)
-	${NIMC} c -d:release -d:windows --threads:on -o:winversion/${APPNAME}.exe src/main.nim
+	${NIMC} c -d:release -d:gamerzillasupport -d:windows --threads:on -o:winversion/${APPNAME}.exe src/main.nim
 	cp -r assets winversion
 	cp config.ini winversion
 	unix2dos winversion/config.ini
@@ -30,10 +30,10 @@ windows: $(SOURCES)
 	zip -r ../${APPNAME}-${DATE}-win32.zip .
 
 linux64: $(SOURCES)
-	${NIMC} c -d:release --threads:on -o:linux/${APPNAME}.x86_64 src/main.nim
+	${NIMC} c -d:release -d:gamerzillasupport --threads:on -o:linux/${APPNAME}.x86_64 src/main.nim
 
 linux32: $(SOURCES)
-	${NIMC} c -d:release -d:linux32 --threads:on -o:linux/${APPNAME}.x86 src/main.nim
+	${NIMC} c -d:release -d:gamerzillasupport -d:linux32 --threads:on -o:linux/${APPNAME}.x86 src/main.nim
 
 linux: linux32 linux64
 	cp -r assets linux
