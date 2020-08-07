@@ -1,0 +1,50 @@
+{
+	"shortname": "smalltrek",
+	"name": "Smalltrek",
+	"image": "gamerzilla/smalltrek.png",
+	"version": "1",
+	"trophy": [
+		{
+			"trophy_name": "Alpha Quadrant",
+			"trophy_desc": "Establish peace in the alpha quandrant.",
+			"max_progress": "8",
+			"trueimage": "gamerzilla/alpha1.png",
+			"falseimage": "gamerzilla/alpha0.png"
+		},
+		{
+			"trophy_name": "Beta Quadrant",
+			"trophy_desc": "Establish peace in the alpha and beta quandrant.",
+			"max_progress": "16",
+			"trueimage": "gamerzilla/beta1.png",
+			"falseimage": "gamerzilla/beta0.png"
+		},
+		{
+			"trophy_name": "Delta Quadrant",
+			"trophy_desc": "Establish peace in the delta quandrant.",
+			"max_progress": "24",
+			"trueimage": "gamerzilla/delta1.png",
+			"falseimage": "gamerzilla/delta0.png"
+		},
+		{
+			"trophy_name": "Peace!",
+			"trophy_desc": "Restore peace to the universe.",
+			"max_progress": "32",
+			"trueimage": "gamerzilla/completed1.png",
+			"falseimage": "gamerzilla/completed0.png"
+		},
+		{
+			"trophy_name": "You Monster",
+			"trophy_desc": "Eradicated all Cuwudles from a planet.",
+			"max_progress": "0",
+			"trueimage": "gamerzilla/monster1.png",
+			"falseimage": "gamerzilla/monster0.png"
+		},
+		{
+			"trophy_name": "Rearrange Chairs",
+			"trophy_desc": "Take 45 or more moves to complete a planet.",
+			"max_progress": "0",
+			"trueimage": "gamerzilla/rearrange1.png",
+			"falseimage": "gamerzilla/rearrange0.png"
+		}
+	]
+}
